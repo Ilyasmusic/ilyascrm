@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Бизнес Соло — Микро CRM</title>
@@ -152,7 +153,7 @@
           <label>с: <input type="date" id="dateFrom"></label>
           <label>по: <input type="date" id="dateTo"></label>
         </div>
-        <button id="exportBtn" class="btn btn-secondary">📥 Экспорт в Excel (CSV)</button>
+        <button id="exportBtn" class="btn btn-secondary">📥 Экспорт в Excel (xlsx)</button>
       </div>
     </div>
     <div id="accountingSummary" class="summary"></div>
@@ -420,7 +421,7 @@
       });
       this.dateFrom.addEventListener('change', () => this.render());
       this.dateTo.addEventListener('change', () => this.render());
-      this.exportBtn.addEventListener('click', () => this.exportToCSV());
+      this.exportBtn.addEventListener('click', () => this.exportToXLSX());
       document.addEventListener('data-updated', () => this.render());
       this.render();
     }
@@ -501,20 +502,59 @@
       `;
     }
 
-    exportToCSV() {
-      const filtered = this.getFilteredObligations();
-      const data = loadData();
-      const clientsMap = new Map(data.clients.map(c => [c.id, c.fio]));
-      let csv = 'Клиент,Описание,Дата,Предоплата,Предоплата получена,Постоплата,Постоплата получена,Затраты\n';
-      filtered.forEach(o => {
-        csv += `"${clientsMap.get(o.clientId) || ''}","${o.desc}","${o.date}","${o.prepay}","${o.prepaid ? 'Да' : 'Нет'}","${o.postpay}","${o.postpaid ? 'Да' : 'Нет'}","${o.costs}"\n`;
-      });
-      const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'Бухгалтерия_БизнесСоло.csv';
-      link.click();
-    }
+exportToXLSX() {
+  const filtered = this.getFilteredObligations();
+  const data = loadData();
+  const clientsMap = new Map(data.clients.map(c => [c.id, c.fio]));
+
+  // 1. Подготовка массива для листа "Обязательства"
+  const rows = filtered.map(o => ({
+    'Клиент': clientsMap.get(o.clientId) || '',
+    'Описание': o.desc,
+    'Дата': o.date ? new Date(o.date).toLocaleDateString('ru-RU') : '',
+    'Предоплата': o.prepay,
+    'Предоплата получена': o.prepaid ? 'Да' : 'Нет',
+    'Постоплата': o.postpay,
+    'Постоплата получена': o.postpaid ? 'Да' : 'Нет',
+    'Затраты': o.costs
+  }));
+
+  // 2. Создание книги и листа
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // 3. Добавим строку с итогами
+  const s = this.calculateStats(filtered);
+  const summaryRow = [
+    'ИТОГО', '',
+    '',
+    s.expectedPrepay,
+    s.receivedPrepay,
+    s.expectedPostpay,
+    s.receivedPostpay,
+    s.totalCosts
+  ];
+  XLSX.utils.sheet_add_aoa(ws, [summaryRow], { origin: -1 }); // добавим в конец
+
+  // 4. Настройка ширины столбцов (по желанию)
+  ws['!cols'] = [
+    { wch: 25 }, // Клиент
+    { wch: 30 }, // Описание
+    { wch: 12 }, // Дата
+    { wch: 12 }, // Предоплата
+    { wch: 15 }, // Предоплата получена
+    { wch: 12 }, // Постоплата
+    { wch: 15 }, // Постоплата получена
+    { wch: 10 }  // Затраты
+  ];
+
+  // 5. Добавляем лист в книгу
+  XLSX.utils.book_append_sheet(wb, ws, 'Бухгалтерия');
+
+  // 6. Скачиваем файл
+  const fileName = `Бухгалтерия_БизнесСоло_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
   }
 
   // ===================== БЛОК ВОРОНКА ПРОДАЖ =====================
