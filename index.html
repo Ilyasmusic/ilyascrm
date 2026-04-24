@@ -67,6 +67,13 @@
 <body>
 <div class="container">
   <h1>📋 Ильяс CRM</h1>
+  <div class="backup-bar" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: #f0fdf4; padding: 12px; border-radius: 10px; flex-wrap: wrap;">
+  <span style="font-weight: 500;">💾 Резервная копия:</span>
+  <button id="downloadBackupBtn" class="btn btn-sm btn-primary">📥 Скачать</button>
+  <button id="uploadBackupBtn" class="btn btn-sm btn-secondary">📤 Загрузить</button>
+  <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+  <span id="lastBackupInfo" style="font-size: 0.8rem; color: #6b7280;"></span>
+</div>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="clients">👤 Клиенты</button>
@@ -698,5 +705,71 @@ render() {
   new AccountingBlock();
   new FunnelBlock();
 </script>
+    // ===================== БЛОК РЕЗЕРВНОГО КОПИРОВАНИЯ =====================
+  (function() {
+    const downloadBtn = document.getElementById('downloadBackupBtn');
+    const uploadBtn = document.getElementById('uploadBackupBtn');
+    const fileInput = document.getElementById('backupFileInput');
+    const infoSpan = document.getElementById('lastBackupInfo');
+
+    // Отображаем время последней модификации данных (из localStorage)
+    function updateLastModified() {
+      const lastMod = localStorage.getItem('businessSolo_lastModified');
+      if (lastMod) {
+        infoSpan.textContent = `Последнее изменение: ${new Date(parseInt(lastMod)).toLocaleString('ru-RU')}`;
+      } else {
+        infoSpan.textContent = 'Нет данных о последнем изменении';
+      }
+    }
+    updateLastModified();
+
+    // Скачивание текущих данных
+    downloadBtn.addEventListener('click', () => {
+      const data = loadData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `BusinessSolo_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      // Обновляем дату последнего сохранения в интерфейсе
+      localStorage.setItem('businessSolo_lastModified', Date.now().toString());
+      updateLastModified();
+    });
+
+    // Загрузка из файла
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!imported.clients || !imported.obligations) {
+            throw new Error('Некорректный формат файла');
+          }
+          if (confirm('Заменить все текущие данные загруженными? Текущие данные будут потеряны.')) {
+            saveData(imported);
+            localStorage.setItem('businessSolo_lastModified', Date.now().toString());
+            updateLastModified();
+            alert('Данные успешно загружены!');
+          }
+        } catch (err) {
+          alert('Ошибка: файл повреждён или имеет неправильный формат.');
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = ''; // очищаем, чтобы можно было снова выбрать тот же файл
+    });
+
+    // Автоматически обновляем метку времени при каждом сохранении
+    document.addEventListener('data-updated', () => {
+      localStorage.setItem('businessSolo_lastModified', Date.now().toString());
+      updateLastModified();
+    });
+  })();
 </body>
 </html>
