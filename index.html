@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ильяс CRM</title>
+  <title>Бизнес Соло — Микро CRM</title>
   <style>
     :root {
       --primary: #4f46e5;
@@ -18,7 +18,11 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
     .container { max-width: 1100px; margin: 20px auto; padding: 20px; }
-    h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--primary); }
+    h1 { font-size: 1.8rem; margin-bottom: 10px; color: var(--primary); }
+    .backup-bar {
+      display: flex; align-items: center; gap: 15px; margin-bottom: 20px;
+      background: #f0fdf4; padding: 12px; border-radius: 10px; flex-wrap: wrap;
+    }
     .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; }
     .tab-btn { padding: 10px 20px; border: none; background: transparent; border-radius: 8px 8px 0 0; font-weight: 500; cursor: pointer; color: var(--gray); transition: 0.2s; }
     .tab-btn.active { background: var(--primary); color: white; }
@@ -66,14 +70,16 @@
 </head>
 <body>
 <div class="container">
-  <h1>📋 Ильяс CRM</h1>
-  <div class="backup-bar" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: #f0fdf4; padding: 12px; border-radius: 10px; flex-wrap: wrap;">
-  <span style="font-weight: 500;">💾 Резервная копия:</span>
-  <button id="downloadBackupBtn" class="btn btn-sm btn-primary">📥 Скачать</button>
-  <button id="uploadBackupBtn" class="btn btn-sm btn-secondary">📤 Загрузить</button>
-  <input type="file" id="backupFileInput" accept=".json" style="display: none;">
-  <span id="lastBackupInfo" style="font-size: 0.8rem; color: #6b7280;"></span>
-</div>
+  <h1>📋 Бизнес Соло</h1>
+
+  <!-- Резервное копирование -->
+  <div class="backup-bar">
+    <span style="font-weight: 500;">💾 Резервная копия:</span>
+    <button id="downloadBackupBtn" class="btn btn-sm btn-primary">📥 Скачать</button>
+    <button id="uploadBackupBtn" class="btn btn-sm btn-secondary">📤 Загрузить</button>
+    <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+    <span id="lastBackupInfo" style="font-size: 0.8rem; color: #6b7280;"></span>
+  </div>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="clients">👤 Клиенты</button>
@@ -191,7 +197,6 @@
     if (!raw) return defaultData;
     try {
       const parsed = JSON.parse(raw);
-      // гарантируем наличие структуры funnel
       if (!parsed.funnel) parsed.funnel = defaultData.funnel;
       if (!parsed.funnel.stages) parsed.funnel.stages = defaultData.funnel.stages;
       if (!parsed.funnel.clientStage) parsed.funnel.clientStage = {};
@@ -244,72 +249,66 @@
       let data = loadData();
       data.clients = data.clients.filter(c => c.id !== id);
       data.obligations = data.obligations.filter(o => o.clientId !== id);
-      // удаляем из воронки
       delete data.funnel.clientStage[id];
       saveData(data);
     }
 
-addToFunnel(clientId) {
-  const data = loadData();
-  // Проверяем, есть ли клиент в клиентах
-  const client = data.clients.find(c => c.id === clientId);
-  if (!client) return;
-  // Если уже в воронке или в мусорке — не добавляем
-  if (data.funnel.clientStage[clientId] !== undefined) return;
-  if (data.funnel.trash.some(t => t.clientId === clientId)) return;
-  // Добавляем на первую стадию (индекс 0)
-  data.funnel.clientStage[clientId] = 0;
-  saveData(data);
-}
-
-render() {
-  const data = loadData();
-  const inFunnel = new Set(Object.keys(data.funnel.clientStage));
-  const trashSet = new Set(data.funnel.trash.map(t => t.clientId));
-
-  this.listEl.innerHTML = data.clients.map(c => {
-    const isInFunnel = inFunnel.has(c.id);
-    const isInTrash = trashSet.has(c.id);
-    let buttonHtml = '';
-    if (!isInFunnel && !isInTrash) {
-      buttonHtml = `<button class="btn btn-sm btn-primary" data-tofunnel="${c.id}">➕ В воронку</button>`;
-    } else if (isInTrash) {
-      buttonHtml = `<span class="badge" style="background:#fee2e2; color:#991b1b;">🗑️ В мусорке</span>`;
-    } else {
-      buttonHtml = `<span class="badge" style="background:#d1fae5; color:#065f46;">✓ В воронке</span>`;
+    addToFunnel(clientId) {
+      const data = loadData();
+      const client = data.clients.find(c => c.id === clientId);
+      if (!client) return;
+      if (data.funnel.clientStage[clientId] !== undefined) return;
+      if (data.funnel.trash.some(t => t.clientId === clientId)) return;
+      data.funnel.clientStage[clientId] = 0;
+      saveData(data);
     }
 
-    return `
-      <li class="client-item">
-        <div class="info">
-          <strong>${c.fio}</strong>
-          ${c.phone ? `📞 ${c.phone}` : ''} ${c.email ? `✉️ ${c.email}` : ''}<br>
-          <small>${c.address || ''} ${c.desc ? '· ' + c.desc : ''}</small>
-        </div>
-        <div class="actions">
-          ${buttonHtml}
-          <button class="btn btn-sm btn-danger" data-del="${c.id}">Удалить</button>
-        </div>
-      </li>
-    `;
-  }).join('');
+    render() {
+      const data = loadData();
+      const inFunnel = new Set(Object.keys(data.funnel.clientStage));
+      const trashSet = new Set(data.funnel.trash.map(t => t.clientId));
 
-  // Обработчики кнопок удаления
-  document.querySelectorAll('[data-del]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      if (confirm('Удалить клиента и все его обязательства?')) {
-        this.deleteClient(e.target.dataset.del);
-      }
-    });
-  });
+      this.listEl.innerHTML = data.clients.map(c => {
+        const isInFunnel = inFunnel.has(c.id);
+        const isInTrash = trashSet.has(c.id);
+        let buttonHtml = '';
+        if (!isInFunnel && !isInTrash) {
+          buttonHtml = `<button class="btn btn-sm btn-primary" data-tofunnel="${c.id}">➕ В воронку</button>`;
+        } else if (isInTrash) {
+          buttonHtml = `<span class="badge" style="background:#fee2e2; color:#991b1b;">🗑️ В мусорке</span>`;
+        } else {
+          buttonHtml = `<span class="badge" style="background:#d1fae5; color:#065f46;">✓ В воронке</span>`;
+        }
 
-  // Обработчики кнопок "В воронку"
-  document.querySelectorAll('[data-tofunnel]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      this.addToFunnel(e.target.dataset.tofunnel);
-    });
-  });
-}
+        return `
+          <li class="client-item">
+            <div class="info">
+              <strong>${c.fio}</strong>
+              ${c.phone ? `📞 ${c.phone}` : ''} ${c.email ? `✉️ ${c.email}` : ''}<br>
+              <small>${c.address || ''} ${c.desc ? '· ' + c.desc : ''}</small>
+            </div>
+            <div class="actions">
+              ${buttonHtml}
+              <button class="btn btn-sm btn-danger" data-del="${c.id}">Удалить</button>
+            </div>
+          </li>
+        `;
+      }).join('');
+
+      document.querySelectorAll('[data-del]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (confirm('Удалить клиента и все его обязательства?')) {
+            this.deleteClient(e.target.dataset.del);
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-tofunnel]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          this.addToFunnel(e.target.dataset.tofunnel);
+        });
+      });
+    }
   }
 
   // ===================== БЛОК ОБЯЗАТЕЛЬСТВА =====================
@@ -406,7 +405,7 @@ render() {
     }
   }
 
-  // ===================== БЛОК БУХГАЛТЕРИЯ (с расширенными периодами) =====================
+  // ===================== БЛОК БУХГАЛТЕРИЯ =====================
   class AccountingBlock {
     constructor() {
       this.periodSelect = document.getElementById('periodSelect');
@@ -549,8 +548,6 @@ render() {
       const data = loadData();
       const stages = data.funnel.stages;
       if (stages.length <= 1) return alert('Должна остаться хотя бы одна стадия');
-      const removedStage = stages[index];
-      // перераспределяем клиентов
       const newIndex = index === 0 ? 0 : index - 1;
       for (const [clientId, stageIdx] of Object.entries(data.funnel.clientStage)) {
         if (stageIdx === index) {
@@ -600,7 +597,6 @@ render() {
       const data = loadData();
       const trashItem = data.funnel.trash.find(t => t.clientId === clientId);
       if (!trashItem) return;
-      // помещаем обратно на первую стадию (или можно запоминать? лучше на первую)
       data.funnel.clientStage[clientId] = 0;
       data.funnel.trash = data.funnel.trash.filter(t => t.clientId !== clientId);
       saveData(data);
@@ -611,7 +607,6 @@ render() {
       const clientsMap = new Map(data.clients.map(c => [c.id, c]));
       const stages = data.funnel.stages;
 
-      // Рендер управляния стадиями
       this.stagesListEl.innerHTML = stages.map((s, idx) => `
         <li class="flex-row" style="justify-content:space-between; margin-bottom:4px;">
           <input type="text" value="${s}" data-rename="${idx}" style="flex:1; margin-right:10px;">
@@ -629,14 +624,11 @@ render() {
         });
       });
 
-      // Построение колонок воронки
-      const columnsMap = new Map(); // stageIndex -> [clientId]
+      const columnsMap = new Map();
       for (const [clientId, stageIdx] of Object.entries(data.funnel.clientStage)) {
         if (!columnsMap.has(stageIdx)) columnsMap.set(stageIdx, []);
         columnsMap.get(stageIdx).push(clientId);
       }
-      // если клиента нет в clientStage, он ещё не в воронке — добавим в первую стадию? Нет, пока не попадёт сам.
-      // Для отображения всех клиентов, не находящихся в воронке, можно добавить отдельную колонку "Не в воронке". Для простоты оставим только тех, кто уже в clientStage.
 
       this.funnelColumnsEl.innerHTML = stages.map((stage, idx) => {
         const clientIds = columnsMap.get(idx) || [];
@@ -660,7 +652,6 @@ render() {
         `;
       }).join('');
 
-      // Обработчики перемещения
       document.querySelectorAll('[data-moveleft]').forEach(btn => {
         btn.addEventListener('click', (e) => this.moveClient(e.target.dataset.moveleft, 'left'));
       });
@@ -673,9 +664,6 @@ render() {
         });
       });
 
-      // Добавление клиента в воронку (не реализовано UI, можно добавить кнопку в карточке клиента). Пока оставим как есть.
-
-      // Мусорка
       this.trashListEl.innerHTML = data.funnel.trash.map(t => `
         <div class="trash-item">
           <span>${t.clientName} — этап «${t.stage}» (${new Date(t.dateRemoved).toLocaleDateString()})</span>
@@ -687,6 +675,68 @@ render() {
       });
     }
   }
+
+  // ===================== РЕЗЕРВНОЕ КОПИРОВАНИЕ =====================
+  (function() {
+    const downloadBtn = document.getElementById('downloadBackupBtn');
+    const uploadBtn = document.getElementById('uploadBackupBtn');
+    const fileInput = document.getElementById('backupFileInput');
+    const infoSpan = document.getElementById('lastBackupInfo');
+
+    function updateLastModified() {
+      const lastMod = localStorage.getItem('businessSolo_lastModified');
+      if (lastMod) {
+        infoSpan.textContent = `Последнее изменение: ${new Date(parseInt(lastMod)).toLocaleString('ru-RU')}`;
+      } else {
+        infoSpan.textContent = 'Нет данных о последнем изменении';
+      }
+    }
+    updateLastModified();
+
+    downloadBtn.addEventListener('click', () => {
+      const data = loadData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `BusinessSolo_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      localStorage.setItem('businessSolo_lastModified', Date.now().toString());
+      updateLastModified();
+    });
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!imported.clients || !imported.obligations) {
+            throw new Error('Некорректный формат файла');
+          }
+          if (confirm('Заменить все текущие данные загруженными? Текущие данные будут потеряны.')) {
+            saveData(imported);
+            localStorage.setItem('businessSolo_lastModified', Date.now().toString());
+            updateLastModified();
+            alert('Данные успешно загружены!');
+          }
+        } catch (err) {
+          alert('Ошибка: файл повреждён или имеет неправильный формат.');
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = '';
+    });
+
+    document.addEventListener('data-updated', () => {
+      localStorage.setItem('businessSolo_lastModified', Date.now().toString());
+      updateLastModified();
+    });
+  })();
 
   // ===================== ИНИЦИАЛИЗАЦИЯ ВКЛАДОК =====================
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -705,6 +755,5 @@ render() {
   new AccountingBlock();
   new FunnelBlock();
 </script>
-
 </body>
 </html>
