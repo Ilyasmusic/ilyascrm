@@ -806,7 +806,7 @@
   }
 
   // ===================== БУХГАЛТЕРИЯ =====================
-  class AccountingTab {
+ class AccountingTab {
     constructor(container) {
       this.container = container;
       document.addEventListener('data-updated', () => this.render());
@@ -815,15 +815,11 @@
     getFiltered(filter = null) {
       const data = loadData();
       if (!filter) {
-        // пытаемся прочитать из DOM, только если контейнер в DOM и активен
         const periodSelect = this.container.querySelector('#periodSelect');
-        const customRange = this.container.querySelector('#customRange');
         const dateFrom = this.container.querySelector('#dateFrom');
         const dateTo = this.container.querySelector('#dateTo');
-        if (!periodSelect) return data.obligations; // экспорт всех
+        if (!periodSelect) return data.obligations;
         const period = periodSelect.value;
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         filter = { period, customFrom: dateFrom?.value, customTo: dateTo?.value };
       }
       const { period, customFrom, customTo } = filter;
@@ -882,87 +878,88 @@
       const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'accounting.csv'; a.click();
     }
-   render() {
-  const filtered = this.getFiltered();
-  const s = {
-    expPre: 0, recPre: 0,    // ожидаемые и полученные предоплаты
-    expPost: 0, recPost: 0,   // ожидаемые и полученные постоплаты
-    costs: 0
-  };
-  filtered.forEach(o => {
-    // Ожидаемая предоплата = сумма предоплат, которые ещё не поступили
-    if (!o.prepaid) s.expPre += o.prepay;
-    else s.recPre += o.prepay;
+    render() {
+      const filtered = this.getFiltered();
+      const s = {
+        expPre: 0, recPre: 0,
+        expPost: 0, recPost: 0,
+        costs: 0
+      };
+      filtered.forEach(o => {
+        if (!o.prepaid) s.expPre += o.prepay;
+        else s.recPre += o.prepay;
+        if (!o.postpaid) s.expPost += o.postpay;
+        else s.recPost += o.postpay;
+        s.costs += o.costs;
+      });
+      const profit = s.recPre + s.recPost - s.costs;
 
-    // Ожидаемая постоплата = сумма постоплат, которые ещё не поступили
-    if (!o.postpaid) s.expPost += o.postpay;
-    else s.recPost += o.postpay;
+      this.container.innerHTML = `
+        <div class="card">
+          <select id="periodSelect" style="width:100%; margin-bottom:8px;">
+            <option value="all">Всё время</option>
+            <option value="today">Сегодня</option>
+            <option value="week">Неделя</option>
+            <option value="month">Месяц</option>
+            <option value="year">Год</option>
+            <option value="lastMonth">Прошлый месяц</option>
+            <option value="lastYear">Прошлый год</option>
+            <option value="custom">Произвольный</option>
+          </select>
+          <div id="customRange" style="display:none; gap:8px; margin-bottom:8px;">
+            <input type="date" id="dateFrom"><input type="date" id="dateTo">
+          </div>
+          <div class="summary-grid">
+            <div class="summary-card">
+              <h4>Предоплаты к получению</h4>
+              <div class="value">${s.expPre.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Получено предоплат</h4>
+              <div class="value" style="color:green">${s.recPre.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Постоплаты к получению</h4>
+              <div class="value">${s.expPost.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Получено постоплат</h4>
+              <div class="value" style="color:green">${s.recPost.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Затраты</h4>
+              <div class="value" style="color:red">${s.costs.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Чистая прибыль</h4>
+              <div class="value">${profit.toFixed(2)}₽</div>
+            </div>
+          </div>
+          <button id="exportBtn" class="btn btn-primary" style="width:100%;">📥 Экспорт CSV</button>
+        </div>
+      `;
 
-    s.costs += o.costs;
-  });
-  const profit = s.recPre + s.recPost - s.costs;
+      // Обработчики событий теперь внутри render()
+      const periodSelect = this.container.querySelector('#periodSelect');
+      const customRange = this.container.querySelector('#customRange');
+      const dateFrom = this.container.querySelector('#dateFrom');
+      const dateTo = this.container.querySelector('#dateTo');
+      const exportBtn = this.container.querySelector('#exportBtn');
 
-  this.container.innerHTML = `
-    <div class="card">
-      <select id="periodSelect" style="width:100%; margin-bottom:8px;">
-        <option value="all">Всё время</option>
-        <option value="today">Сегодня</option>
-        <option value="week">Неделя</option>
-        <option value="month">Месяц</option>
-        <option value="year">Год</option>
-        <option value="lastMonth">Прошлый месяц</option>
-        <option value="lastYear">Прошлый год</option>
-        <option value="custom">Произвольный</option>
-      </select>
-      <div id="customRange" style="display:none; gap:8px; margin-bottom:8px;">
-        <input type="date" id="dateFrom"><input type="date" id="dateTo">
-      </div>
-      <div class="summary-grid">
-        <div class="summary-card">
-          <h4>Предоплаты к получению</h4>
-          <div class="value">${s.expPre.toFixed(2)}₽</div>
-        </div>
-        <div class="summary-card">
-          <h4>Получено предоплат</h4>
-          <div class="value" style="color:green">${s.recPre.toFixed(2)}₽</div>
-        </div>
-        <div class="summary-card">
-          <h4>Постоплаты к получению</h4>
-          <div class="value">${s.expPost.toFixed(2)}₽</div>
-        </div>
-        <div class="summary-card">
-          <h4>Получено постоплат</h4>
-          <div class="value" style="color:green">${s.recPost.toFixed(2)}₽</div>
-        </div>
-        <div class="summary-card">
-          <h4>Затраты</h4>
-          <div class="value" style="color:red">${s.costs.toFixed(2)}₽</div>
-        </div>
-        <div class="summary-card">
-          <h4>Чистая прибыль</h4>
-          <div class="value">${profit.toFixed(2)}₽</div>
-        </div>
-      </div>
-      <button id="exportBtn" class="btn btn-primary" style="width:100%;">📥 Экспорт CSV</button>
-    </div>
-  `;
-  // ... обработчики событий (periodSelect, export, dateFrom/dateTo) остаются без изменений, поэтому их не дублирую
-}
-      const periodSelect = document.getElementById('periodSelect');
-      const customRange = document.getElementById('customRange');
       if (periodSelect) {
         periodSelect.addEventListener('change', () => {
           if (customRange) customRange.style.display = periodSelect.value === 'custom' ? 'flex' : 'none';
           this.render();
         });
       }
-      document.getElementById('exportBtn')?.addEventListener('click', () => this.exportCSV());
-      document.getElementById('dateFrom')?.addEventListener('change', () => this.render());
-      document.getElementById('dateTo')?.addEventListener('change', () => this.render());
+      if (exportBtn) {
+        exportBtn.addEventListener('click', () => this.exportCSV());
+      }
+      if (dateFrom) dateFrom.addEventListener('change', () => this.render());
+      if (dateTo) dateTo.addEventListener('change', () => this.render());
       if (customRange) customRange.style.display = periodSelect?.value === 'custom' ? 'flex' : 'none';
     }
-  }
-
+}
   // ===================== НАСТРОЙКИ =====================
   class SettingsTab {
     constructor(container) {
