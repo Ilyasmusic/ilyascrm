@@ -171,9 +171,12 @@
     }
     @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
     .tax-row { background: #f0fdf4; border-left: 4px solid var(--success); }
-    .tax-card { background: #f0fdf4; padding: 12px; border-radius: var(--radius); margin-top: 10px; }
+    .option-badge {
+      display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 8px;
+      background: #e5e7eb; color: var(--text); font-size: 0.85rem; cursor: pointer; border: none;
+    }
+    .option-badge.active { background: var(--success); color: white; }
   </style>
 </head>
 <body>
@@ -243,7 +246,7 @@
   const STORAGE_KEY = 'businessSolo';
   function loadData() {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const def = { clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] } };
+    const def = { clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] }, taxStartDay: 1 };
     if(!raw) return def;
     try {
       const p = JSON.parse(raw);
@@ -252,7 +255,7 @@
       if(!p.funnel.clientStage) p.funnel.clientStage = {};
       if(!p.funnel.trash) p.funnel.trash = [];
       p.funnel.trash = p.funnel.trash.map(t=> t.stageIndex===undefined&&t.stage?{...t,stageIndex:p.funnel.stages.indexOf(t.stage)}:t);
-      // миграция клиентов без типа
+      p.taxStartDay = p.taxStartDay || 1;
       p.clients.forEach(c => { if (!c.type) c.type = 'individual'; });
       return p;
     } catch(e) { return def; }
@@ -342,8 +345,8 @@
     toggleObligation(id,field){ let d=loadData(); const o=d.obligations.find(o=>o.id===id); if(!o)return; o[field]=!o[field]; saveData(d); }
     editObligation(id){ const d=loadData(); const o=d.obligations.find(o=>o.id===id); if(!o)return;
       document.getElementById('taskId').value=o.id; document.getElementById('taskClientSelect').value=o.clientId;
-      document.getElementById('taskDesc').value=o.desc; document.getElementById('taskPrepay').value=o.prepay;
-      document.getElementById('taskPostpay').value=o.postpay; document.getElementById('taskCosts').value=o.costs;
+      document.getElementById('taskDesc').value=o.desc; document.getElementById('taskPrepay').value=o.prepay||'';
+      document.getElementById('taskPostpay').value=o.postpay||''; document.getElementById('taskCosts').value=o.costs||'';
       document.getElementById('taskDate').value=o.date; document.getElementById('taskModalTitle').textContent='Редактировать';
       showModal('taskModal');
     }
@@ -548,37 +551,53 @@
         }
       });
     }
-    exportCSV(all=false){
-      const filtered = all ? loadData().obligations : this.getFiltered();
-      const data = loadData();
-      const clientsMap = new Map(data.clients.map(c => [c.id, c.fio]));
-      let csv = 'Клиент,Описание,Дата,Предоплата,Предоплата получена,Постоплата,Постоплата получена,Затраты\n';
-      filtered.forEach(o => {
-        csv += [
-          escapeCSV(clientsMap.get(o.clientId) || ''),
-          escapeCSV(o.desc),
-          escapeCSV(o.date || ''),
-          o.prepay,
-          o.prepaid ? 'Да' : 'Нет',
-          o.postpay,
-          o.postpaid ? 'Да' : 'Нет',
-          o.costs
-        ].join(',') + '\n';
-      });
-      const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'accounting.csv'; a.click();
-    }
     render(){
       const filtered = this.getFiltered();
       const data = loadData();
       const s = { expPre:0, recPre:0, expPost:0, recPost:0, costs:0 };
-      let taxBaseInd = 0, taxBaseComp = 0;
       filtered.forEach(o => {
         if (!o.prepaid) s.expPre += o.prepay; else s.recPre += o.prepay;
         if (!o.postpaid) s.expPost += o.postpay; else s.recPost += o.postpay;
         s.costs += o.costs;
-        // доходы для налога (только полученные)
-        if (o.clientId !== 'tax') {
+      });
+      const profit = s.recPre + s.recPost - s.costs;
+
+      // Расчёт налога за последний налоговый период
+      const startDay = data.taxStartDay || 1;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const getLastTaxPeriod = (startDay) => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth(); // 0-январь
+        const day = now.getDate();
+        let endMonth, endYear, endDay;
+        if (day >= startDay) {
+          endMonth = month;
+          endYear = year;
+        } else {
+          endMonth = month - 1;
+          endYear = year;
+          if (endMonth < 0) { endMonth = 11; endYear--; }
+        }
+        endDay = startDay - 1;
+        if (endDay === 0) {
+          endMonth--;
+          if (endMonth < 0) { endMonth = 11; endYear--; }
+          endDay = new Date(endYear, endMonth+1, 0).getDate();
+        }
+        const endDate = new Date(endYear, endMonth, endDay, 23, 59, 59, 999);
+        let startMonth = endMonth - 1;
+        let startYear = endYear;
+        if (startMonth < 0) { startMonth = 11; startYear--; }
+        const startDate = new Date(startYear, startMonth, startDay);
+        return { start: startDate, end: endDate };
+      };
+      const taxPeriod = getLastTaxPeriod(startDay);
+      let taxBaseInd = 0, taxBaseComp = 0;
+      data.obligations.forEach(o => {
+        if (!o.date) return;
+        const d = new Date(o.date);
+        if (d >= taxPeriod.start && d <= taxPeriod.end && o.clientId !== 'tax') {
           const client = data.clients.find(c => c.id === o.clientId);
           const income = (o.prepaid ? o.prepay : 0) + (o.postpaid ? o.postpay : 0);
           if (client && client.type === 'company') taxBaseComp += income;
@@ -586,7 +605,6 @@
         }
       });
       const taxAmount = taxBaseInd * 0.04 + taxBaseComp * 0.06;
-      const profit = s.recPre + s.recPost - s.costs;
 
       this.container.innerHTML = `
         <div class="card">
@@ -603,15 +621,16 @@
             <div class="summary-card"><h4>Получено постоплат</h4><div class="value" style="color:green">${s.recPost.toFixed(2)}₽</div></div>
             <div class="summary-card"><h4>Затраты</h4><div class="value" style="color:red">${s.costs.toFixed(2)}₽</div></div>
             <div class="summary-card"><h4>Чистая прибыль</h4><div class="value">${profit.toFixed(2)}₽</div></div>
+            <div class="summary-card">
+              <h4>Налог НПД</h4>
+              <div class="value">${taxAmount.toFixed(2)}₽</div>
+              <small>ФЛ 4%: ${(taxBaseInd*0.04).toFixed(2)} / ЮЛ 6%: ${(taxBaseComp*0.06).toFixed(2)}</small>
+            </div>
           </div>
-          <div class="tax-card">
-            <strong>🧾 Расчёт налога НПД</strong><br>
-            Доход от ФЛ: ${taxBaseInd.toFixed(2)} × 4% = ${(taxBaseInd*0.04).toFixed(2)} ₽<br>
-            Доход от ЮЛ/ИП: ${taxBaseComp.toFixed(2)} × 6% = ${(taxBaseComp*0.06).toFixed(2)} ₽<br>
-            <strong>К уплате: ${taxAmount.toFixed(2)} ₽</strong>
-            <button id="payTaxBtn" class="btn btn-success" style="margin-top:8px;width:100%;">Оплатить налог</button>
+          <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+            <label style="font-size:0.85rem;">Начало налогового периода (день):</label>
+            <input type="number" id="taxStartDay" min="1" max="28" value="${startDay}" style="width:60px;">
           </div>
-          <button id="exportBtn" class="btn btn-primary" style="width:100%;margin-top:10px;">📥 Экспорт CSV</button>
         </div>
       `;
 
@@ -621,22 +640,10 @@
       if (customRange) customRange.style.display = periodSelect?.value==='custom'?'flex':'none';
       this.container.querySelector('#dateFrom')?.addEventListener('change', ()=>this.render());
       this.container.querySelector('#dateTo')?.addEventListener('change', ()=>this.render());
-      this.container.querySelector('#exportBtn').addEventListener('click', ()=>this.exportCSV());
-      this.container.querySelector('#payTaxBtn').addEventListener('click', ()=>{
-        if (taxAmount <= 0) { showToast('Нет налога к уплате за этот период'); return; }
-        if (!confirm(`Создать запись об уплате налога ${taxAmount.toFixed(2)} ₽?`)) return;
+      this.container.querySelector('#taxStartDay')?.addEventListener('change', (e) => {
         let d = loadData();
-        d.obligations.push({
-          id: Date.now().toString(),
-          clientId: 'tax',
-          desc: `Уплата налога НПД за выбранный период`,
-          prepay: 0, postpay: 0,
-          prepaid: false, postpaid: false,
-          costs: taxAmount,
-          date: new Date().toISOString().slice(0,16)
-        });
+        d.taxStartDay = parseInt(e.target.value) || 1;
         saveData(d);
-        showToast('Налог оплачен, расход добавлен');
         this.render();
       });
     }
@@ -651,28 +658,24 @@
           <button id="downloadBackupBtn" class="btn btn-primary" style="width:100%;margin-bottom:8px;">📥 Скачать</button>
           <button id="uploadBackupBtn" class="btn" style="width:100%;">📤 Загрузить</button><input id="backupFileInput" accept=".json" hidden>
         </div>
-        <div class="card"><h3>📤 Экспорт / Импорт по разделам</h3>
-          <button class="btn btn-sm export-json" data-export="clients" style="width:100%;margin-bottom:6px;">👥 Клиенты JSON</button>
-          <button class="btn btn-sm export-json" data-export="tasks" style="width:100%;margin-bottom:6px;">📋 Задачи JSON</button>
-          <button class="btn btn-sm export-json" data-export="funnel" style="width:100%;margin-bottom:6px;">📊 Воронка JSON</button>
-          <button class="btn btn-sm export-json" data-export="accounting" style="width:100%;margin-bottom:12px;">💰 Бухгалтерия JSON</button>
-          <input id="importJsonInput" accept=".json" hidden><button id="importJsonBtn" class="btn" style="width:100%;">📤 Импортировать JSON</button>
-        </div>
-        <div class="card"><h3>📤 Экспорт CSV</h3>
-          <button id="exportClientsBtn" class="btn" style="width:100%;margin-bottom:6px;">👥 Клиенты CSV</button>
-          <button id="exportTasksBtn" class="btn" style="width:100%;margin-bottom:6px;">📋 Задачи CSV</button>
-          <button id="exportFunnelBtn" class="btn" style="width:100%;margin-bottom:6px;">📊 Воронка CSV</button>
-          <button id="exportAccountingBtn" class="btn" style="width:100%;">💰 Бухгалтерия CSV (все)</button>
+        <div class="card" id="exportImportCard"><h3>📤 Экспорт / Импорт</h3>
+          <div style="margin-bottom:8px;"><strong>Действие:</strong> <button class="option-badge active" data-action="export">Экспорт</button> <button class="option-badge" data-action="import">Импорт</button></div>
+          <div style="margin-bottom:8px;"><strong>Формат:</strong> <button class="option-badge active" data-format="json">JSON</button> <button class="option-badge" data-format="csv">CSV</button></div>
+          <div style="margin-bottom:8px;"><strong>Тип данных:</strong> <button class="option-badge active" data-type="all">Все данные</button> <button class="option-badge" data-type="clients">Клиенты</button> <button class="option-badge" data-type="tasks">Задачи</button> <button class="option-badge" data-type="funnel">Воронка</button> <button class="option-badge" data-type="accounting">Бухгалтерия</button></div>
+          <div style="margin-bottom:12px;"><strong>Период:</strong> <button class="option-badge active" data-period="all">Всё время</button> <button class="option-badge" data-period="year">Год</button> <button class="option-badge" data-period="month">Месяц</button> <button class="option-badge" data-period="week">Неделя</button> <button class="option-badge" data-period="custom">Произв.</button></div>
+          <div id="customExportRange" style="display:none;gap:8px;margin-bottom:8px;"><input type="date" id="exportDateFrom"><input type="date" id="exportDateTo"></div>
+          <button id="executeExportImportBtn" class="btn btn-primary" style="width:100%;">Выполнить</button>
+          <input id="importFileInput" accept=".json,.csv" hidden>
         </div>
         <div class="card"><h3>🛠️ Управление</h3>
-          <button id="resetDataBtn" class="btn btn-danger" style="width:100%;margin-bottom:12px;">🗑️ Сбросить все данные</button>
-          <button id="showConsentAgain" class="btn" style="width:100%;">📄 Соглашение</button>
+          <button id="resetDataBtn" class="btn btn-danger" style="width:100%;">🗑️ Сбросить данные…</button>
         </div>
         <div class="card"><h3>ℹ️ О приложении</h3>
           <a href="https://boosty.to/ilyasishmukhametov" target="_blank" style="display:block;padding:10px 0;">❤️ Boosty</a>
           <a href="https://www.donationalerts.com/r/ilyas_donationalerts" target="_blank" style="display:block;padding:10px 0;">💲 DonationAlerts</a>
           <a href="https://vk.ru/composerbloknot" target="_blank" style="display:block;padding:10px 0;">✉️ ВК</a>
           <a href="https://github.com/Ilyasmusic/ilyascrm" target="_blank" style="display:block;padding:10px 0;">👨‍💻 GitHub</a>
+          <button id="showConsentAgain" class="btn btn-sm" style="margin-top:10px;">📄 Политика конфиденциальности</button>
           <p style="margin-top:16px;text-align:center;font-size:0.8rem;">© 2026 Бизнес Соло</p>
         </div>`;
 
@@ -695,26 +698,111 @@
         reader.readAsText(file);
       };
 
-      this.container.querySelectorAll('.export-json').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const type = btn.dataset.export; const data = loadData(); let exportData;
-          switch(type) {
-            case 'clients': exportData = { clients: data.clients }; break;
-            case 'tasks': exportData = { obligations: data.obligations }; break;
-            case 'funnel': exportData = { funnel: data.funnel }; break;
-            case 'accounting': exportData = { obligations: data.obligations, clients: data.clients }; break;
-          }
-          const blob = new Blob([JSON.stringify(exportData)], {type:'application/json'});
-          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${type}.json`; a.click();
+      // Экспорт/импорт UI
+      const eiCard = document.getElementById('exportImportCard');
+      let eiState = { action: 'export', format: 'json', type: 'all', period: 'all' };
+      eiCard.querySelectorAll('.option-badge[data-action]').forEach(b => {
+        b.addEventListener('click', () => {
+          eiCard.querySelectorAll('.option-badge[data-action]').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          eiState.action = b.dataset.action;
         });
       });
+      eiCard.querySelectorAll('.option-badge[data-format]').forEach(b => {
+        b.addEventListener('click', () => {
+          eiCard.querySelectorAll('.option-badge[data-format]').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          eiState.format = b.dataset.format;
+        });
+      });
+      eiCard.querySelectorAll('.option-badge[data-type]').forEach(b => {
+        b.addEventListener('click', () => {
+          eiCard.querySelectorAll('.option-badge[data-type]').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          eiState.type = b.dataset.type;
+        });
+      });
+      eiCard.querySelectorAll('.option-badge[data-period]').forEach(b => {
+        b.addEventListener('click', () => {
+          eiCard.querySelectorAll('.option-badge[data-period]').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          eiState.period = b.dataset.period;
+          document.getElementById('customExportRange').style.display = eiState.period==='custom'?'flex':'none';
+        });
+      });
+      document.getElementById('executeExportImportBtn').addEventListener('click', () => {
+        if (eiState.action === 'export') {
+          this.executeExport(eiState);
+        } else {
+          document.getElementById('importFileInput').click();
+          document.getElementById('importFileInput').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            this.executeImport(file, eiState);
+          };
+        }
+      });
+      document.getElementById('showConsentAgain').onclick = () => showModal('consentModal');
 
-      document.getElementById('importJsonBtn').onclick = () => document.getElementById('importJsonInput').click();
-      document.getElementById('importJsonInput').onchange = (e) => {
-        const file = e.target.files[0]; if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
+      // Сброс данных
+      document.getElementById('resetDataBtn').onclick = () => {
+        showModal('resetDataModal');
+        this.renderResetModal();
+      };
+    }
+
+    executeExport(state) {
+      const data = loadData();
+      let exportData = {};
+      if (state.type === 'all') exportData = data;
+      else {
+        if (state.type === 'clients') exportData.clients = data.clients;
+        else if (state.type === 'tasks') exportData.obligations = data.obligations;
+        else if (state.type === 'funnel') exportData.funnel = data.funnel;
+        else if (state.type === 'accounting') exportData = { obligations: data.obligations, clients: data.clients };
+      }
+
+      // Фильтрация по периоду для obligations
+      if (state.period !== 'all' && exportData.obligations) {
+        const filter = this.getPeriodFilter(state);
+        exportData.obligations = exportData.obligations.filter(o => {
+          if (!o.date) return false;
+          const d = new Date(o.date);
+          return d >= filter.start && d <= filter.end;
+        });
+      }
+
+      if (state.format === 'json') {
+        const blob = new Blob([JSON.stringify(exportData)], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'export.json'; a.click();
+      } else if (state.format === 'csv') {
+        let csv = '';
+        if (state.type === 'clients' || state.type === 'all') {
+          csv += 'ФИО,Телефон,Email,Адрес,Описание\n';
+          (exportData.clients||[]).forEach(c => csv += `${escapeCSV(c.fio)},${escapeCSV(c.phone||'')},${escapeCSV(c.email||'')},${escapeCSV(c.address||'')},${escapeCSV(c.desc||'')}\n`);
+        }
+        if (state.type === 'tasks' || state.type === 'all' || state.type === 'accounting') {
+          const map = new Map(data.clients.map(c=>[c.id,c.fio]));
+          csv += 'Клиент,Описание,Дата,Предоплата,Постоплата,Затраты\n';
+          (exportData.obligations||[]).forEach(o => csv += `${escapeCSV(map.get(o.clientId)||'')},${escapeCSV(o.desc)},${escapeCSV(o.date||'')},${o.prepay},${o.postpay},${o.costs}\n`);
+        }
+        if (state.type === 'funnel' || state.type === 'all') {
+          csv += 'Клиент,Стадия\n';
+          for (const [cid, idx] of Object.entries((exportData.funnel||{}).clientStage||{})) {
+            const client = data.clients.find(c=>c.id===cid);
+            csv += `${escapeCSV(client?.fio||'')},${escapeCSV((exportData.funnel?.stages||[])[idx]||'')}\n`;
+          }
+        }
+        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'export.csv'; a.click();
+      }
+    }
+
+    executeImport(file, state) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          if (state.format === 'json') {
             const imported = JSON.parse(ev.target.result);
             if (!confirm('Импортировать? Будут добавлены только новые записи.')) return;
             const data = loadData();
@@ -723,37 +811,112 @@
             if (imported.funnel) { if(imported.funnel.stages) data.funnel.stages = imported.funnel.stages; if(imported.funnel.clientStage) Object.assign(data.funnel.clientStage, imported.funnel.clientStage); if(imported.funnel.trash) data.funnel.trash = imported.funnel.trash; }
             saveData(data);
             showToast('Импорт завершён');
-          } catch { showToast('Ошибка чтения файла'); }
-        };
-        reader.readAsText(file);
+          } else if (state.format === 'csv') {
+            showToast('Импорт CSV не поддерживается');
+          }
+        } catch { showToast('Ошибка чтения файла'); }
       };
+      reader.readAsText(file);
+    }
 
-      document.getElementById('exportClientsBtn').onclick = () => {
-        const data = loadData();
-        let csv = 'ФИО,Телефон,Email,Адрес,Описание\n';
-        data.clients.forEach(c => csv += `${escapeCSV(c.fio)},${escapeCSV(c.phone||'')},${escapeCSV(c.email||'')},${escapeCSV(c.address||'')},${escapeCSV(c.desc||'')}\n`);
-        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'clients.csv'; a.click();
-      };
-      document.getElementById('exportTasksBtn').onclick = () => {
-        const data = loadData(); const map = new Map(data.clients.map(c=>[c.id,c.fio]));
-        let csv = 'Клиент,Описание,Дата,Предоплата,Постоплата,Затраты\n';
-        data.obligations.forEach(o => csv += `${escapeCSV(map.get(o.clientId)||'')},${escapeCSV(o.desc)},${escapeCSV(o.date||'')},${o.prepay},${o.postpay},${o.costs}\n`);
-        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tasks.csv'; a.click();
-      };
-      document.getElementById('exportFunnelBtn').onclick = () => {
-        const data = loadData();
-        let csv = 'Клиент,Стадия\n';
-        for (const [cid, idx] of Object.entries(data.funnel.clientStage)) { const client = data.clients.find(c=>c.id===cid); csv += `${escapeCSV(client?.fio||'')},${escapeCSV(data.funnel.stages[idx]||'')}\n`; }
-        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'funnel.csv'; a.click();
-      };
-      document.getElementById('exportAccountingBtn').onclick = () => { const temp = new AccountingTab(document.createElement('div')); temp.exportCSV(true); };
-      document.getElementById('resetDataBtn').onclick = () => {
-        if (confirm('Сбросить все данные?')) {
-          saveData({ clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] } });
-          showToast('Данные сброшены');
+    getPeriodFilter(state) {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      let start, end;
+      switch(state.period) {
+        case 'year': start = new Date(now.getFullYear(),0,1); end = new Date(now.getFullYear(),11,31,23,59,59); break;
+        case 'month': start = new Date(now.getFullYear(), now.getMonth(), 1); end = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59); break;
+        case 'week': { const day = now.getDay()||7; start = new Date(now); start.setDate(now.getDate()-day+1); start.setHours(0,0,0,0); end = new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999); } break;
+        case 'custom': {
+          const df = document.getElementById('exportDateFrom')?.value;
+          const dt = document.getElementById('exportDateTo')?.value;
+          start = df ? new Date(df) : new Date(0);
+          end = dt ? new Date(dt) : new Date();
+          if (df) start.setHours(0,0,0,0);
+          if (dt) end.setHours(23,59,59,999);
+          break;
         }
+        default: start = new Date(0); end = new Date();
+      }
+      return { start, end };
+    }
+
+    renderResetModal() {
+      const content = document.getElementById('resetContent');
+      content.innerHTML = `
+        <div style="margin-bottom:12px;"><strong>Что сбрасываем:</strong>
+          <select id="resetType" style="width:100%;">
+            <option value="all">Все данные</option>
+            <option value="clients">Клиенты</option>
+            <option value="obligations">Задачи</option>
+            <option value="funnel">Воронка</option>
+            <option value="accounting">Бухгалтерия (обязательства)</option>
+          </select>
+        </div>
+        <div id="resetPeriodBlock" style="margin-bottom:12px;"><strong>Период:</strong>
+          <select id="resetPeriod" style="width:100%;">
+            <option value="all">Всё время</option>
+            <option value="year">Год</option>
+            <option value="month">Месяц</option>
+            <option value="week">Неделя</option>
+            <option value="custom">Произвольный</option>
+          </select>
+        </div>
+        <div id="resetCustomRange" style="display:none;gap:8px;margin-bottom:8px;"><input type="date" id="resetDateFrom"><input type="date" id="resetDateTo"></div>
+        <button id="performResetBtn" class="btn btn-danger" style="width:100%;">Сбросить</button>`;
+
+      document.getElementById('resetPeriod').addEventListener('change', function() {
+        document.getElementById('resetCustomRange').style.display = this.value==='custom'?'flex':'none';
+      });
+      document.getElementById('performResetBtn').onclick = () => {
+        const type = document.getElementById('resetType').value;
+        const period = document.getElementById('resetPeriod').value;
+        const df = document.getElementById('resetDateFrom')?.value;
+        const dt = document.getElementById('resetDateTo')?.value;
+        this.performReset(type, period, df, dt);
       };
-      document.getElementById('showConsentAgain').onclick = () => showModal('consentModal');
+    }
+
+    performReset(type, period, df, dt) {
+      if (!confirm('Вы уверены? Данные будут безвозвратно удалены.')) return;
+      let data = loadData();
+      const filter = (obligations) => {
+        if (period === 'all') return obligations;
+        const filterObj = this.getPeriodFilter({period, customFrom: df, customTo: dt});
+        return obligations.filter(o => {
+          if (!o.date) return false;
+          const d = new Date(o.date);
+          return d >= filterObj.start && d <= filterObj.end;
+        });
+      };
+      switch(type) {
+        case 'all':
+          if (period === 'all') {
+            data = { clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] }, taxStartDay: data.taxStartDay };
+          } else {
+            data.obligations = data.obligations.filter(o => !filter([o]).length);
+          }
+          break;
+        case 'clients':
+          data.clients = [];
+          data.obligations = data.obligations.filter(o => o.clientId === 'tax');
+          Object.keys(data.funnel.clientStage).forEach(k => delete data.funnel.clientStage[k]);
+          data.funnel.trash = [];
+          break;
+        case 'obligations':
+          data.obligations = data.obligations.filter(o => o.clientId === 'tax' || !filter([o]).length);
+          break;
+        case 'funnel':
+          data.funnel.clientStage = {};
+          data.funnel.trash = [];
+          break;
+        case 'accounting':
+          data.obligations = data.obligations.filter(o => o.clientId === 'tax' || !filter([o]).length);
+          break;
+      }
+      saveData(data);
+      hideModal('resetDataModal');
+      showToast('Данные сброшены');
     }
   }
 
@@ -776,9 +939,9 @@
         <input type="hidden" id="taskId">
         <div class="form-group"><label>Клиент</label><select id="taskClientSelect"></select></div>
         <div class="form-group"><label>Описание</label><input id="taskDesc"></div>
-        <div class="form-group"><label>Предоплата, ₽</label><input type="number" id="taskPrepay" value="0" step="0.01"></div>
-        <div class="form-group"><label>Постоплата, ₽</label><input type="number" id="taskPostpay" value="0" step="0.01"></div>
-        <div class="form-group"><label>Затраты, ₽</label><input type="number" id="taskCosts" value="0" step="0.01"></div>
+        <div class="form-group"><label>Предоплата, ₽</label><input type="number" id="taskPrepay" value="" step="0.01"></div>
+        <div class="form-group"><label>Постоплата, ₽</label><input type="number" id="taskPostpay" value="" step="0.01"></div>
+        <div class="form-group"><label>Затраты, ₽</label><input type="number" id="taskCosts" value="" step="0.01"></div>
         <div class="form-group"><label>Дата и время</label><input type="datetime-local" id="taskDate"></div>
         <div class="modal-buttons"><button class="btn" onclick="hideModal('taskModal')">Отмена</button><button class="btn btn-primary" id="saveTaskBtn">Сохранить</button></div>
       </div></div>
@@ -786,6 +949,7 @@
       <div id="trashModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>🗑️ Мусорка</h3><div id="trashContent"></div><button class="btn" onclick="hideModal('trashModal')">Закрыть</button></div></div>
       <div id="addToFunnelModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>Добавить в воронку</h3><div id="addToFunnelContent"></div><button class="btn" onclick="hideModal('addToFunnelModal')">Закрыть</button></div></div>
       <div id="stagesModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>Управление стадиями</h3><div id="stagesList"></div><input id="newStageName" placeholder="Новая стадия" style="width:100%;margin-top:8px;"><button id="addStageBtn" class="btn btn-primary" style="width:100%;margin-top:4px;">Добавить</button><button class="btn" onclick="hideModal('stagesModal')" style="width:100%;margin-top:8px;">Закрыть</button></div></div>
+      <div id="resetDataModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>Сброс данных</h3><div id="resetContent"></div><button class="btn" onclick="hideModal('resetDataModal')" style="width:100%;margin-top:8px;">Отмена</button></div></div>
     `);
 
     const consentKey = 'privacyAccepted';
