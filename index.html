@@ -17,7 +17,23 @@
       --warning: #f59e0b;
       --success: #10b981;
       --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --summary-bg: #f3f4f6;
       --radius: 12px;
+    }
+    /* Тёмная тема */
+    body.dark {
+      --primary: #818cf8;
+      --primary-light: #1e1b4b;
+      --bg: #111827;
+      --card: #1f2937;
+      --text: #f9fafb;
+      --gray: #9ca3af;
+      --border: #374151;
+      --shadow: 0 1px 3px rgba(0,0,0,0.5);
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --summary-bg: #2d3748;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -28,6 +44,7 @@
       justify-content: center;
       align-items: center;
       height: 100dvh;
+      transition: background 0.3s, color 0.3s;
     }
     #app {
       width: 100%;
@@ -51,6 +68,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+    }
+    .last-backup {
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: var(--gray);
+      background: var(--bg);
+      padding: 4px 8px;
+      border-radius: 8px;
     }
     .app-content {
       flex: 1;
@@ -129,6 +154,7 @@
     .search-input {
       width: 100%; padding: 10px; border: 1px solid var(--border);
       border-radius: 8px; margin-bottom: 12px; font-size: 0.95rem;
+      background: var(--card); color: var(--text);
     }
     .funnel-columns { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; }
     .funnel-col {
@@ -141,7 +167,10 @@
       display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .summary-card { background: #f3f4f6; padding: 12px; border-radius: var(--radius); }
+    .summary-card {
+      background: var(--summary-bg); padding: 12px; border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
     .summary-card h4 { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; }
     .summary-card .value { font-size: 1.4rem; font-weight: bold; margin-top: 4px; }
 
@@ -160,12 +189,13 @@
     .form-group label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 0.85rem; }
     .form-group input, .form-group select, .form-group textarea {
       width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem;
+      background: var(--card); color: var(--text);
     }
     .modal-buttons { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
 
     .toast-container { position: fixed; top: 16px; right: 16px; left: 16px; z-index: 200; pointer-events: none; }
     .toast {
-      background: var(--text); color: white; padding: 12px 16px; border-radius: 8px;
+      background: var(--text); color: var(--bg); padding: 12px 16px; border-radius: 8px;
       margin-bottom: 8px; box-shadow: var(--shadow); font-size: 0.9rem;
       animation: slideIn 0.3s ease; pointer-events: auto;
     }
@@ -177,10 +207,21 @@
       background: #e5e7eb; color: var(--text); font-size: 0.85rem; cursor: pointer; border: none;
     }
     .option-badge.active { background: var(--success); color: white; }
+
+    /* Тёмная тема для отдельных элементов */
+    body.dark .funnel-col { background: #1f2937; }
+    body.dark .funnel-card { background: #374151; color: #f9fafb; }
+    body.dark .tax-row { background: #064e3b; }
+    body.dark .btn { background: #4b5563; color: #f9fafb; }
+    body.dark .btn-primary { background: var(--primary); }
+    body.dark .option-badge { background: #4b5563; }
+    body.dark .option-badge.active { background: var(--success); }
+    body.dark .summary-card { box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
   </style>
 </head>
 <body>
 <div id="app">
+  <!-- Модалка согласия (первичная) -->
   <div id="consentModal" class="modal-overlay" style="display:none;">
     <div class="modal">
       <h3>📄 Политика конфиденциальности и условия использования «Бизнес Соло»</h3>
@@ -190,7 +231,7 @@
         1. <strong>Общие положения</strong><br>
         Приложение «Бизнес Соло» (далее — «Приложение») функционирует исключительно на устройстве Пользователя. Вся информация, вносимая в Приложение (включая, но не ограничиваясь: фамилии, имена, отчества, номера телефонов, адреса электронной почты, физические адреса, финансовые показатели), сохраняется локально с использованием механизма localStorage веб-браузера, входящего в состав Приложения.<br><br>
         2. <strong>Порядок обработки персональных данных</strong><br>
-        Пользователь самостоятельно определяет цели обработки персональных данных, состав обрабатываемых персональных данных, а также действия (операции), совершаемые с ними. В рамках использования Приложения Пользователь выступает оператором персональных данных в смысле, придаваемом Федеральным законом «О персональных данных». Разработчик Приложения (Илья Ишмухаметов) не осуществляет сбор, хранение, систематизацию, накопление, уточнение, использование, распространение, передачу, обезличивание, блокирование, уничтожение персональных данных, внесённых Пользователем в Приложение. Разработчик не имеет доступа к указанным данным ни при каких обстоятельствах.<br><br>
+        Пользователь самостоятельно определяет цели обработки персональных данных, состав обрабатываемых персональных данных, а также действия (операции), совершаемые с ними. В рамках использования Приложения Пользователь выступает оператором персональных данных в смысле, придаваемом Федеральным законом «О персональных данных». Разработчик Приложения (Ильяс Ишмухаметов) не осуществляет сбор, хранение, систематизацию, накопление, уточнение, использование, распространение, передачу, обезличивание, блокирование, уничтожение персональных данных, внесённых Пользователем в Приложение. Разработчик не имеет доступа к указанным данным ни при каких обстоятельствах.<br><br>
         3. <strong>Согласие на обработку</strong><br>
         Пользователь обязан самостоятельно получить необходимые согласия от субъектов персональных данных, чьи данные вносятся в Приложение. Разработчик не несёт ответственности за нарушение Пользователем законодательства о персональных данных.<br><br>
         4. <strong>Хранение и безопасность</strong><br>
@@ -206,7 +247,7 @@
         Обратная связь: ВКонтакте (vk.ru/composerbloknot).<br>
         Приложение создано с использованием технологий искусственного интеллекта.
       </div>
-      <div class="form-group">
+      <div id="consentCheckboxGroup" class="form-group">
         <label><input type="checkbox" id="consentCheckbox"> Я ознакомлен(а) и согласен(а) с условиями</label>
       </div>
       <button id="acceptConsentBtn" class="btn btn-primary" disabled>Принимаю</button>
@@ -214,7 +255,7 @@
   </div>
 
   <div id="mainUI" style="display:none; flex-direction:column; height:100%;">
-    <div class="app-header"><span id="headerTitle">Клиенты</span></div>
+    <div class="app-header"><span id="headerTitle">Клиенты</span><span class="last-backup" id="lastBackupLabel">Бэкап: никогда</span></div>
     <div class="app-content" id="appContent">
       <div id="tab-clients" class="tab-content active"></div>
       <div id="tab-tasks" class="tab-content"></div>
@@ -246,26 +287,77 @@
   const STORAGE_KEY = 'businessSolo';
   function loadData() {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const def = { clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] }, taxStartDay: 1 };
+    const def = { clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] }, taxStartDay: 1, lastBackupTime: null, theme: 'light', themeStartTime: '20:00', themeEndTime: '07:00' };
     if(!raw) return def;
     try {
       const p = JSON.parse(raw);
+      p.taxStartDay = p.taxStartDay || 1;
+      p.lastBackupTime = p.lastBackupTime || null;
+      p.theme = p.theme || 'light';
+      p.themeStartTime = p.themeStartTime || '20:00';
+      p.themeEndTime = p.themeEndTime || '07:00';
       if(!p.funnel) p.funnel = def.funnel;
       if(!p.funnel.stages) p.funnel.stages = def.funnel.stages;
       if(!p.funnel.clientStage) p.funnel.clientStage = {};
       if(!p.funnel.trash) p.funnel.trash = [];
       p.funnel.trash = p.funnel.trash.map(t=> t.stageIndex===undefined&&t.stage?{...t,stageIndex:p.funnel.stages.indexOf(t.stage)}:t);
-      p.taxStartDay = p.taxStartDay || 1;
       p.clients.forEach(c => { if (!c.type) c.type = 'individual'; });
       return p;
     } catch(e) { return def; }
   }
   function saveData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); document.dispatchEvent(new CustomEvent('data-updated')); }
 
+  // Тема
+  function applyTheme() {
+    const data = loadData();
+    const body = document.body;
+    if (data.theme === 'dark') {
+      body.classList.add('dark');
+    } else if (data.theme === 'light') {
+      body.classList.remove('dark');
+    } else if (data.theme === 'auto') {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const [startH, startM] = (data.themeStartTime || '20:00').split(':').map(Number);
+      const [endH, endM] = (data.themeEndTime || '07:00').split(':').map(Number);
+      const start = startH * 60 + startM;
+      const end = endH * 60 + endM;
+      const isDark = start < end ? (currentMinutes >= start && currentMinutes < end) : (currentMinutes >= start || currentMinutes < end);
+      if (isDark) body.classList.add('dark');
+      else body.classList.remove('dark');
+    }
+  }
+  applyTheme();
+  setInterval(applyTheme, 60000);
+
+  function updateLastBackupLabel() {
+    const data = loadData();
+    const label = document.getElementById('lastBackupLabel');
+    if (!label) return;
+    if (data.lastBackupTime) {
+      const d = new Date(data.lastBackupTime);
+      label.textContent = 'Бэкап: ' + d.toLocaleDateString('ru-RU', {day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' + d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+    } else {
+      label.textContent = 'Бэкап: никогда';
+    }
+  }
+  document.addEventListener('data-updated', updateLastBackupLabel);
+  window.addEventListener('load', updateLastBackupLabel);
+
   const modals = {};
-  function showModal(id) {
+  function showModal(id, mode = 'default') {
     if(!modals[id]) modals[id]=document.getElementById(id);
-    if(modals[id]) modals[id].style.display='flex';
+    if(modals[id]) {
+      if (id === 'consentModal' && mode === 'view') {
+        // Режим только просмотр: скрываем чекбокс и кнопку
+        document.getElementById('consentCheckboxGroup').style.display = 'none';
+        document.getElementById('acceptConsentBtn').style.display = 'none';
+      } else if (id === 'consentModal') {
+        document.getElementById('consentCheckboxGroup').style.display = 'block';
+        document.getElementById('acceptConsentBtn').style.display = 'block';
+      }
+      modals[id].style.display='flex';
+    }
     if(id==='stagesModal' && window.funnelTabInstance) window.funnelTabInstance.renderStagesManagement();
     window.history.pushState({modalOpen:id},'');
   }
@@ -283,7 +375,7 @@
     window.history.pushState({tab},'');
   }
 
-  // =================== КЛИЕНТЫ (с типом) ===================
+  // =================== КЛИЕНТЫ ===================
   class ClientsTab {
     constructor(container) {
       this.container = container;
@@ -438,24 +530,12 @@
           const stages = d.funnel.stages;
           if (dir === 'up' && i > 0) {
             [stages[i], stages[i-1]] = [stages[i-1], stages[i]];
-            for (const [cid, s] of Object.entries(d.funnel.clientStage)) {
-              if (s === i) d.funnel.clientStage[cid] = i-1;
-              else if (s === i-1) d.funnel.clientStage[cid] = i;
-            }
-            for (const item of d.funnel.trash) {
-              if (item.stageIndex === i) item.stageIndex = i-1;
-              else if (item.stageIndex === i-1) item.stageIndex = i;
-            }
+            for (const [cid, s] of Object.entries(d.funnel.clientStage)) { if (s === i) d.funnel.clientStage[cid] = i-1; else if (s === i-1) d.funnel.clientStage[cid] = i; }
+            for (const item of d.funnel.trash) { if (item.stageIndex === i) item.stageIndex = i-1; else if (item.stageIndex === i-1) item.stageIndex = i; }
           } else if (dir === 'down' && i < stages.length-1) {
             [stages[i], stages[i+1]] = [stages[i+1], stages[i]];
-            for (const [cid, s] of Object.entries(d.funnel.clientStage)) {
-              if (s === i) d.funnel.clientStage[cid] = i+1;
-              else if (s === i+1) d.funnel.clientStage[cid] = i;
-            }
-            for (const item of d.funnel.trash) {
-              if (item.stageIndex === i) item.stageIndex = i+1;
-              else if (item.stageIndex === i+1) item.stageIndex = i;
-            }
+            for (const [cid, s] of Object.entries(d.funnel.clientStage)) { if (s === i) d.funnel.clientStage[cid] = i+1; else if (s === i+1) d.funnel.clientStage[cid] = i; }
+            for (const item of d.funnel.trash) { if (item.stageIndex === i) item.stageIndex = i+1; else if (item.stageIndex === i+1) item.stageIndex = i; }
           }
           saveData(d);
           this.renderStagesManagement();
@@ -465,19 +545,12 @@
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.dataset.delStage);
           const d = loadData();
-          const movedCount = Object.values(d.funnel.clientStage).filter(s => s === idx).length +
-            d.funnel.trash.filter(t => t.stageIndex === idx).length;
+          const movedCount = Object.values(d.funnel.clientStage).filter(s => s === idx).length + d.funnel.trash.filter(t => t.stageIndex === idx).length;
           if (!confirm(`Удалить стадию «${d.funnel.stages[idx]}»? ${movedCount} клиентов будут перенесены на предыдущую стадию.`)) return;
           if (d.funnel.stages.length <= 1) return;
           const newIdx = idx === 0 ? 0 : idx - 1;
-          for (const [cid, s] of Object.entries(d.funnel.clientStage)) {
-            if (s === idx) d.funnel.clientStage[cid] = newIdx;
-            else if (s > idx) d.funnel.clientStage[cid] = s - 1;
-          }
-          for (const item of d.funnel.trash) {
-            if (item.stageIndex === idx) item.stageIndex = newIdx;
-            else if (item.stageIndex > idx) item.stageIndex -= 1;
-          }
+          for (const [cid, s] of Object.entries(d.funnel.clientStage)) { if (s === idx) d.funnel.clientStage[cid] = newIdx; else if (s > idx) d.funnel.clientStage[cid] = s - 1; }
+          for (const item of d.funnel.trash) { if (item.stageIndex === idx) item.stageIndex = newIdx; else if (item.stageIndex > idx) item.stageIndex -= 1; }
           d.funnel.stages.splice(idx, 1);
           saveData(d);
           this.renderStagesManagement();
@@ -524,9 +597,9 @@
     }
   }
 
-  // =================== БУХГАЛТЕРИЯ с расчётом налога ===================
+  // =================== БУХГАЛТЕРИЯ ===================
   class AccountingTab {
-    constructor(container) { this.container=container; document.addEventListener('data-updated',()=>this.render()); this.render(); }
+    constructor(container) { this.container=container; this.currentPeriod = 'all'; document.addEventListener('data-updated',()=>this.render()); this.render(); }
     getFiltered(filter=null) {
       const data=loadData();
       if(!filter) {
@@ -562,29 +635,17 @@
       });
       const profit = s.recPre + s.recPost - s.costs;
 
-      // Расчёт налога за последний налоговый период
       const startDay = data.taxStartDay || 1;
-      const today = new Date(); today.setHours(0,0,0,0);
       const getLastTaxPeriod = (startDay) => {
         const now = new Date();
         const year = now.getFullYear();
-        const month = now.getMonth(); // 0-январь
+        const month = now.getMonth();
         const day = now.getDate();
         let endMonth, endYear, endDay;
-        if (day >= startDay) {
-          endMonth = month;
-          endYear = year;
-        } else {
-          endMonth = month - 1;
-          endYear = year;
-          if (endMonth < 0) { endMonth = 11; endYear--; }
-        }
+        if (day >= startDay) { endMonth = month; endYear = year; }
+        else { endMonth = month - 1; endYear = year; if (endMonth < 0) { endMonth = 11; endYear--; } }
         endDay = startDay - 1;
-        if (endDay === 0) {
-          endMonth--;
-          if (endMonth < 0) { endMonth = 11; endYear--; }
-          endDay = new Date(endYear, endMonth+1, 0).getDate();
-        }
+        if (endDay === 0) { endMonth--; if (endMonth < 0) { endMonth = 11; endYear--; } endDay = new Date(endYear, endMonth+1, 0).getDate(); }
         const endDate = new Date(endYear, endMonth, endDay, 23, 59, 59, 999);
         let startMonth = endMonth - 1;
         let startYear = endYear;
@@ -620,12 +681,12 @@
             <div class="summary-card"><h4>Постоплаты к получению</h4><div class="value">${s.expPost.toFixed(2)}₽</div></div>
             <div class="summary-card"><h4>Получено постоплат</h4><div class="value" style="color:green">${s.recPost.toFixed(2)}₽</div></div>
             <div class="summary-card"><h4>Затраты</h4><div class="value" style="color:red">${s.costs.toFixed(2)}₽</div></div>
-            <div class="summary-card"><h4>Чистая прибыль</h4><div class="value">${profit.toFixed(2)}₽</div></div>
             <div class="summary-card">
               <h4>Налог НПД</h4>
               <div class="value">${taxAmount.toFixed(2)}₽</div>
               <small>ФЛ 4%: ${(taxBaseInd*0.04).toFixed(2)} / ЮЛ 6%: ${(taxBaseComp*0.06).toFixed(2)}</small>
             </div>
+            <div class="summary-card"><h4>Чистая прибыль</h4><div class="value">${profit.toFixed(2)}₽</div></div>
           </div>
           <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
             <label style="font-size:0.85rem;">Начало налогового периода (день):</label>
@@ -636,8 +697,15 @@
 
       const periodSelect = this.container.querySelector('#periodSelect');
       const customRange = this.container.querySelector('#customRange');
-      if (periodSelect) periodSelect.addEventListener('change', () => { customRange.style.display = periodSelect.value==='custom'?'flex':'none'; this.render(); });
-      if (customRange) customRange.style.display = periodSelect?.value==='custom'?'flex':'none';
+      if (periodSelect) {
+        periodSelect.value = this.currentPeriod;
+        customRange.style.display = this.currentPeriod === 'custom' ? 'flex' : 'none';
+        periodSelect.addEventListener('change', () => {
+          this.currentPeriod = periodSelect.value;
+          customRange.style.display = this.currentPeriod === 'custom' ? 'flex' : 'none';
+          this.render();
+        });
+      }
       this.container.querySelector('#dateFrom')?.addEventListener('change', ()=>this.render());
       this.container.querySelector('#dateTo')?.addEventListener('change', ()=>this.render());
       this.container.querySelector('#taxStartDay')?.addEventListener('change', (e) => {
@@ -653,6 +721,7 @@
   class SettingsTab {
     constructor(container) { this.container=container; this.render(); }
     render() {
+      const data = loadData();
       this.container.innerHTML = `
         <div class="card"><h3>💾 Резервное копирование</h3>
           <button id="downloadBackupBtn" class="btn btn-primary" style="width:100%;margin-bottom:8px;">📥 Скачать</button>
@@ -666,6 +735,17 @@
           <div id="customExportRange" style="display:none;gap:8px;margin-bottom:8px;"><input type="date" id="exportDateFrom"><input type="date" id="exportDateTo"></div>
           <button id="executeExportImportBtn" class="btn btn-primary" style="width:100%;">Выполнить</button>
           <input id="importFileInput" accept=".json,.csv" hidden>
+        </div>
+        <div class="card"><h3>🎨 Тема оформления</h3>
+          <select id="themeSelect" style="width:100%;margin-bottom:8px;">
+            <option value="light" ${data.theme==='light'?'selected':''}>Светлая</option>
+            <option value="dark" ${data.theme==='dark'?'selected':''}>Тёмная</option>
+            <option value="auto" ${data.theme==='auto'?'selected':''}>Авто (по времени)</option>
+          </select>
+          <div id="autoThemeSettings" style="display:${data.theme==='auto'?'block':'none'};">
+            <div class="form-group"><label>С (начало тёмной темы)</label><input type="time" id="themeStartTime" value="${data.themeStartTime || '20:00'}"></div>
+            <div class="form-group"><label>До (конец тёмной темы)</label><input type="time" id="themeEndTime" value="${data.themeEndTime || '07:00'}"></div>
+          </div>
         </div>
         <div class="card"><h3>🛠️ Управление</h3>
           <button id="resetDataBtn" class="btn btn-danger" style="width:100%;">🗑️ Сбросить данные…</button>
@@ -682,6 +762,9 @@
       document.getElementById('downloadBackupBtn').onclick = () => {
         const blob = new Blob([JSON.stringify(loadData())], {type:'application/json'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click();
+        let d = loadData();
+        d.lastBackupTime = new Date().toISOString();
+        saveData(d);
       };
       document.getElementById('uploadBackupBtn').onclick = () => document.getElementById('backupFileInput').click();
       document.getElementById('backupFileInput').onchange = (e) => {
@@ -735,16 +818,32 @@
           this.executeExport(eiState);
         } else {
           document.getElementById('importFileInput').click();
-          document.getElementById('importFileInput').onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            this.executeImport(file, eiState);
-          };
+          document.getElementById('importFileInput').onchange = (e) => { const file = e.target.files[0]; if(file) this.executeImport(file, eiState); };
         }
       });
-      document.getElementById('showConsentAgain').onclick = () => showModal('consentModal');
+      document.getElementById('showConsentAgain').onclick = () => showModal('consentModal', 'view');
 
-      // Сброс данных
+      // Тема
+      document.getElementById('themeSelect').addEventListener('change', function() {
+        let d = loadData();
+        d.theme = this.value;
+        saveData(d);
+        applyTheme();
+        document.getElementById('autoThemeSettings').style.display = this.value==='auto'?'block':'none';
+      });
+      document.getElementById('themeStartTime').addEventListener('change', function() {
+        let d = loadData();
+        d.themeStartTime = this.value;
+        saveData(d);
+        applyTheme();
+      });
+      document.getElementById('themeEndTime').addEventListener('change', function() {
+        let d = loadData();
+        d.themeEndTime = this.value;
+        saveData(d);
+        applyTheme();
+      });
+
       document.getElementById('resetDataBtn').onclick = () => {
         showModal('resetDataModal');
         this.renderResetModal();
@@ -761,21 +860,14 @@
         else if (state.type === 'funnel') exportData.funnel = data.funnel;
         else if (state.type === 'accounting') exportData = { obligations: data.obligations, clients: data.clients };
       }
-
-      // Фильтрация по периоду для obligations
       if (state.period !== 'all' && exportData.obligations) {
         const filter = this.getPeriodFilter(state);
-        exportData.obligations = exportData.obligations.filter(o => {
-          if (!o.date) return false;
-          const d = new Date(o.date);
-          return d >= filter.start && d <= filter.end;
-        });
+        exportData.obligations = exportData.obligations.filter(o => { if(!o.date) return false; const d = new Date(o.date); return d >= filter.start && d <= filter.end; });
       }
-
       if (state.format === 'json') {
         const blob = new Blob([JSON.stringify(exportData)], {type:'application/json'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'export.json'; a.click();
-      } else if (state.format === 'csv') {
+      } else {
         let csv = '';
         if (state.type === 'clients' || state.type === 'all') {
           csv += 'ФИО,Телефон,Email,Адрес,Описание\n';
@@ -811,9 +903,7 @@
             if (imported.funnel) { if(imported.funnel.stages) data.funnel.stages = imported.funnel.stages; if(imported.funnel.clientStage) Object.assign(data.funnel.clientStage, imported.funnel.clientStage); if(imported.funnel.trash) data.funnel.trash = imported.funnel.trash; }
             saveData(data);
             showToast('Импорт завершён');
-          } else if (state.format === 'csv') {
-            showToast('Импорт CSV не поддерживается');
-          }
+          } else showToast('Импорт CSV не поддерживается');
         } catch { showToast('Ошибка чтения файла'); }
       };
       reader.readAsText(file);
@@ -821,21 +911,19 @@
 
     getPeriodFilter(state) {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       let start, end;
       switch(state.period) {
         case 'year': start = new Date(now.getFullYear(),0,1); end = new Date(now.getFullYear(),11,31,23,59,59); break;
         case 'month': start = new Date(now.getFullYear(), now.getMonth(), 1); end = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59); break;
         case 'week': { const day = now.getDay()||7; start = new Date(now); start.setDate(now.getDate()-day+1); start.setHours(0,0,0,0); end = new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999); } break;
-        case 'custom': {
+        case 'custom':
           const df = document.getElementById('exportDateFrom')?.value;
           const dt = document.getElementById('exportDateTo')?.value;
           start = df ? new Date(df) : new Date(0);
           end = dt ? new Date(dt) : new Date();
-          if (df) start.setHours(0,0,0,0);
-          if (dt) end.setHours(23,59,59,999);
+          if(df) start.setHours(0,0,0,0);
+          if(dt) end.setHours(23,59,59,999);
           break;
-        }
         default: start = new Date(0); end = new Date();
       }
       return { start, end };
@@ -846,28 +934,17 @@
       content.innerHTML = `
         <div style="margin-bottom:12px;"><strong>Что сбрасываем:</strong>
           <select id="resetType" style="width:100%;">
-            <option value="all">Все данные</option>
-            <option value="clients">Клиенты</option>
-            <option value="obligations">Задачи</option>
-            <option value="funnel">Воронка</option>
-            <option value="accounting">Бухгалтерия (обязательства)</option>
+            <option value="all">Все данные</option><option value="clients">Клиенты</option><option value="obligations">Задачи</option><option value="funnel">Воронка</option><option value="accounting">Бухгалтерия (обязательства)</option>
           </select>
         </div>
         <div id="resetPeriodBlock" style="margin-bottom:12px;"><strong>Период:</strong>
           <select id="resetPeriod" style="width:100%;">
-            <option value="all">Всё время</option>
-            <option value="year">Год</option>
-            <option value="month">Месяц</option>
-            <option value="week">Неделя</option>
-            <option value="custom">Произвольный</option>
+            <option value="all">Всё время</option><option value="year">Год</option><option value="month">Месяц</option><option value="week">Неделя</option><option value="custom">Произвольный</option>
           </select>
         </div>
         <div id="resetCustomRange" style="display:none;gap:8px;margin-bottom:8px;"><input type="date" id="resetDateFrom"><input type="date" id="resetDateTo"></div>
         <button id="performResetBtn" class="btn btn-danger" style="width:100%;">Сбросить</button>`;
-
-      document.getElementById('resetPeriod').addEventListener('change', function() {
-        document.getElementById('resetCustomRange').style.display = this.value==='custom'?'flex':'none';
-      });
+      document.getElementById('resetPeriod').addEventListener('change', function() { document.getElementById('resetCustomRange').style.display = this.value==='custom'?'flex':'none'; });
       document.getElementById('performResetBtn').onclick = () => {
         const type = document.getElementById('resetType').value;
         const period = document.getElementById('resetPeriod').value;
@@ -883,19 +960,12 @@
       const filter = (obligations) => {
         if (period === 'all') return obligations;
         const filterObj = this.getPeriodFilter({period, customFrom: df, customTo: dt});
-        return obligations.filter(o => {
-          if (!o.date) return false;
-          const d = new Date(o.date);
-          return d >= filterObj.start && d <= filterObj.end;
-        });
+        return obligations.filter(o => { if(!o.date) return false; const d = new Date(o.date); return d >= filterObj.start && d <= filterObj.end; });
       };
       switch(type) {
         case 'all':
-          if (period === 'all') {
-            data = { clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] }, taxStartDay: data.taxStartDay };
-          } else {
-            data.obligations = data.obligations.filter(o => !filter([o]).length);
-          }
+          if (period === 'all') data = { ...data, clients: [], obligations: [], funnel: { stages: ['Созвонились','Договорились о цене','Получена предоплата','Выполнено'], clientStage:{}, trash:[] } };
+          else data.obligations = data.obligations.filter(o => o.clientId === 'tax' || !filter([o]).length);
           break;
         case 'clients':
           data.clients = [];
@@ -924,8 +994,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     document.body.insertAdjacentHTML('beforeend', `
       <div id="clientModal" class="modal-overlay" style="display:none;"><div class="modal">
-        <h3>Клиент</h3>
-        <input type="hidden" id="clientId">
+        <h3>Клиент</h3><input type="hidden" id="clientId">
         <div class="form-group"><label>ФИО</label><input id="clientFIO" required></div>
         <div class="form-group"><label>Тип</label><select id="clientType"><option value="individual">Физическое лицо</option><option value="company">Юридическое лицо / ИП</option></select></div>
         <div class="form-group"><label>Телефон</label><input id="clientPhone"></div>
@@ -935,14 +1004,13 @@
         <div class="modal-buttons"><button class="btn" onclick="hideModal('clientModal')">Отмена</button><button class="btn btn-primary" id="saveClientBtn">Сохранить</button></div>
       </div></div>
       <div id="taskModal" class="modal-overlay" style="display:none;"><div class="modal">
-        <h3 id="taskModalTitle">Новое обязательство</h3>
-        <input type="hidden" id="taskId">
+        <h3 id="taskModalTitle">Новое обязательство</h3><input type="hidden" id="taskId">
         <div class="form-group"><label>Клиент</label><select id="taskClientSelect"></select></div>
         <div class="form-group"><label>Описание</label><input id="taskDesc"></div>
         <div class="form-group"><label>Предоплата, ₽</label><input type="number" id="taskPrepay" value="" step="0.01"></div>
         <div class="form-group"><label>Постоплата, ₽</label><input type="number" id="taskPostpay" value="" step="0.01"></div>
         <div class="form-group"><label>Затраты, ₽</label><input type="number" id="taskCosts" value="" step="0.01"></div>
-        <div class="form-group"><label>Дата и время</label><input type="datetime-local" id="taskDate"></div>
+        <div class="form-group"><label>Дата и время</label><div style="display:flex; gap:8px;"><input type="datetime-local" id="taskDate" style="flex:1;"><button type="button" id="taskDateNowBtn" class="btn btn-sm">Сейчас</button></div></div>
         <div class="modal-buttons"><button class="btn" onclick="hideModal('taskModal')">Отмена</button><button class="btn btn-primary" id="saveTaskBtn">Сохранить</button></div>
       </div></div>
       <div id="clientDetailModal" class="modal-overlay" style="display:none;"><div class="modal"><div id="clientDetailContent"></div><button class="btn" onclick="hideModal('clientDetailModal')">Закрыть</button></div></div>
@@ -971,7 +1039,6 @@
 
     function initApp() {
       document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
-
       new ClientsTab(document.getElementById('tab-clients'));
       new TasksTab(document.getElementById('tab-tasks'));
       new FunnelTab(document.getElementById('tab-funnel'));
@@ -982,15 +1049,7 @@
         const id = document.getElementById('clientId').value;
         const fio = document.getElementById('clientFIO').value.trim();
         if (!fio) return showToast('ФИО обязательно');
-        const client = {
-          id: id || Date.now().toString(),
-          fio,
-          type: document.getElementById('clientType').value,
-          phone: document.getElementById('clientPhone').value,
-          email: document.getElementById('clientEmail').value,
-          address: document.getElementById('clientAddress').value,
-          desc: document.getElementById('clientDesc').value
-        };
+        const client = { id: id || Date.now().toString(), fio, type: document.getElementById('clientType').value, phone: document.getElementById('clientPhone').value, email: document.getElementById('clientEmail').value, address: document.getElementById('clientAddress').value, desc: document.getElementById('clientDesc').value };
         let data = loadData();
         if (id) { const idx = data.clients.findIndex(c => c.id === id); if (idx !== -1) data.clients[idx] = client; }
         else data.clients.push(client);
@@ -1004,8 +1063,7 @@
         const desc = document.getElementById('taskDesc').value.trim();
         if (!clientId || !desc) return showToast('Заполните клиента и описание');
         const task = {
-          id: id || Date.now().toString(),
-          clientId, desc,
+          id: id || Date.now().toString(), clientId, desc,
           prepay: parseFloat(document.getElementById('taskPrepay').value) || 0,
           postpay: parseFloat(document.getElementById('taskPostpay').value) || 0,
           prepaid: false, postpaid: false,
@@ -1017,6 +1075,12 @@
         else data.obligations.push(task);
         saveData(data);
         hideModal('taskModal');
+      });
+
+      document.getElementById('taskDateNowBtn').addEventListener('click', () => {
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        document.getElementById('taskDate').value = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
       });
 
       function updateTaskClientSelect() {
@@ -1032,9 +1096,7 @@
     }
 
     window.addEventListener('popstate', function(event) {
-      if (event.state) {
-        if (event.state.modalOpen) { const modalId = event.state.modalOpen; if (modals[modalId]) modals[modalId].style.display = 'none'; }
-      }
+      if (event.state && event.state.modalOpen) { const modalId = event.state.modalOpen; if (modals[modalId]) modals[modalId].style.display = 'none'; }
     });
   });
 </script>
