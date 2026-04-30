@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Бизнес Соло — Микро CRM</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #eef2ff;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --text: #111827;
+      --gray: #6b7280;
+      --border: #e5e7eb;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100dvh;
+    }
+    #app {
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 30px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .app-header {
+      padding: 16px 20px 8px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 16px 80px 16px;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Нижнее меню */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 20;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      color: var(--gray);
+      font-size: 0.65rem;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 12px;
+      transition: 0.2s;
+      cursor: pointer;
+      flex: 1;
+    }
+    .nav-item.active {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+    .nav-icon { font-size: 1.3rem; }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--card);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+    .list-item .info { flex: 1; }
+    .list-item .actions { display: flex; gap: 8px; margin-left: 12px; }
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      background: #e5e7eb;
+      color: var(--text);
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .fab {
+      position: sticky;
+      bottom: 16px;
+      float: right;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+      z-index: 5;
+    }
+    .search-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+    .funnel-columns {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+    }
+    .funnel-col {
+      flex: 1;
+      min-width: 140px;
+      background: #f3f4f6;
+      border-radius: var(--radius);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    .funnel-col h3 { font-size: 0.8rem; margin-bottom: 8px; text-align: center; font-weight: 600; }
+    .funnel-card {
+      background: white;
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .summary-card {
+      background: #f3f4f6;
+      padding: 12px;
+      border-radius: var(--radius);
+    }
+    .summary-card h4 { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; }
+    .summary-card .value { font-size: 1.4rem; font-weight: bold; margin-top: 4px; }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      animation: fadeIn 0.2s;
+    }
+    .modal {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      width: 90%;
+      max-width: 420px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .modal h3 { margin-bottom: 16px; color: var(--primary); }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-weight: 500; margin-bottom: 4px; font-size: 0.85rem; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .modal-buttons { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      left: 16px;
+      z-index: 200;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--text);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      box-shadow: var(--shadow);
+      font-size: 0.9rem;
+      animation: slideIn 0.3s ease;
+      pointer-events: auto;
+    }
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Модальное окно согласия -->
+  <div id="consentModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3>📄 Политика конфиденциальности и условия использования «Бизнес Соло»</h3>
+      <div class="policy-text" style="font-size:0.85rem; line-height:1.5; max-height:300px; overflow-y:auto; margin-bottom:12px;">
+        <strong>Дата последнего обновления: 30 апреля 2026 года</strong><br><br>
+        Настоящий документ разработан в соответствии с Федеральным законом от 27.07.2006 №152-ФЗ «О персональных данных», Федеральным законом от 27.07.2006 №149-ФЗ «Об информации, информационных технологиях и о защите информации» и иными нормативными правовыми актами Российской Федерации.<br><br>
+        1. <strong>Общие положения</strong><br>
+        Приложение «Бизнес Соло» (далее — «Приложение») функционирует исключительно на устройстве Пользователя. Вся информация, вносимая в Приложение (включая, но не ограничиваясь: фамилии, имена, отчества, номера телефонов, адреса электронной почты, физические адреса, финансовые показатели), сохраняется локально с использованием механизма localStorage веб-браузера, входящего в состав Приложения.<br><br>
+        2. <strong>Порядок обработки персональных данных</strong><br>
+        Пользователь самостоятельно определяет цели обработки персональных данных, состав обрабатываемых персональных данных, а также действия (операции), совершаемые с ними. В рамках использования Приложения Пользователь выступает оператором персональных данных в смысле, придаваемом Федеральным законом «О персональных данных». Разработчик Приложения (Илья Ишмухаметов) не осуществляет сбор, хранение, систематизацию, накопление, уточнение, использование, распространение, передачу, обезличивание, блокирование, уничтожение персональных данных, внесённых Пользователем в Приложение. Разработчик не имеет доступа к указанным данным ни при каких обстоятельствах.<br><br>
+        3. <strong>Согласие на обработку</strong><br>
+        Пользователь обязан самостоятельно получить необходимые согласия от субъектов персональных данных, чьи данные вносятся в Приложение. Разработчик не несёт ответственности за нарушение Пользователем законодательства о персональных данных.<br><br>
+        4. <strong>Хранение и безопасность</strong><br>
+        Данные сохраняются в незашифрованном виде в localStorage, который защищён стандартными механизмами безопасности операционной системы и браузера. Пользователь осознаёт и принимает риски, связанные с возможностью несанкционированного доступа третьих лиц к его разблокированному устройству.<br>
+        При очистке данных браузера, переустановке Приложения, использовании режима инкогнито информация может быть безвозвратно утеряна. Настоятельно рекомендуется регулярно создавать резервные копии.<br><br>
+        5. <strong>Бесплатность и добровольные пожертвования</strong><br>
+        Приложение предоставляется на безвозмездной основе. Поддержка разработки осуществляется исключительно через добровольные пожертвования на платформах Boosty и DonationAlerts (ссылки доступны в разделе «О приложении»).<br><br>
+        6. <strong>Ответственность и отказ от гарантий</strong><br>
+        Приложение предоставляется по принципу «как есть». Разработчик не гарантирует отсутствие ошибок, бесперебойную и безошибочную работу, а также полную сохранность данных. Разработчик не несёт ответственности за любые убытки, прямые или косвенные, возникшие в результате использования или невозможности использования Приложения.<br><br>
+        7. <strong>Применимое право и разрешение споров</strong><br>
+        Отношения между Пользователем и Разработчиком регулируются законодательством Российской Федерации. Все споры подлежат разрешению в досудебном претензионном порядке (срок ответа — 30 дней), а при недостижении согласия — в суде по месту нахождения Разработчика.<br><br>
+        8. <strong>Контакты</strong><br>
+        Обратная связь: ВКонтакте (vk.ru/composerbloknot).<br>
+        Приложение создано с использованием технологий искусственного интеллекта.
+      </div>
+      <div class="form-group">
+        <label><input type="checkbox" id="consentCheckbox"> Я ознакомлен(а) и согласен(а) с условиями</label>
+      </div>
+      <button id="acceptConsentBtn" class="btn btn-primary" disabled>Принимаю</button>
+    </div>
+  </div>
+
+  <!-- Основной UI -->
+  <div id="mainUI" style="display:none; flex-direction:column; height:100%;">
+    <div class="app-header">
+      <span id="headerTitle">Клиенты</span>
+    </div>
+    <div class="app-content" id="appContent">
+      <div id="tab-clients" class="tab-content active"></div>
+      <div id="tab-tasks" class="tab-content"></div>
+      <div id="tab-funnel" class="tab-content"></div>
+      <div id="tab-accounting" class="tab-content"></div>
+      <div id="tab-settings" class="tab-content"></div>
+    </div>
+    <div class="bottom-nav" id="bottomNav">
+      <button class="nav-item active" data-tab="clients"><span class="nav-icon">👥</span>Клиенты</button>
+      <button class="nav-item" data-tab="tasks"><span class="nav-icon">📋</span>Задачи</button>
+      <button class="nav-item" data-tab="funnel"><span class="nav-icon">📊</span>Воронка</button>
+      <button class="nav-item" data-tab="accounting"><span class="nav-icon">💰</span>Бухгалтерия</button>
+      <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>Настройки</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast контейнер -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+  // Проверка безопасного контекста (для WebView)
+  if (window.location.protocol !== 'https:' && window.location.protocol !== 'file:' && !window.location.hostname.includes('localhost')) {
+    console.warn('Приложение работает в небезопасном контексте. Некоторые функции могут быть недоступны.');
+  }
+
+  // ===================== УТИЛИТЫ =====================
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+  function escapeCSV(str) {
+    if (typeof str !== 'string') str = String(str);
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  function showToast(message, duration = 2000) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), duration);
+  }
+
+  // ===================== ХРАНИЛИЩЕ =====================
+  const STORAGE_KEY = 'businessSolo';
+  function loadData() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const defaultData = {
+      clients: [],
+      obligations: [],
+      funnel: {
+        stages: ['Созвонились', 'Договорились о цене', 'Получена предоплата', 'Выполнено'],
+        clientStage: {},
+        trash: []
+      }
+    };
+    if (!raw) return defaultData;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!parsed.funnel) parsed.funnel = defaultData.funnel;
+      if (!parsed.funnel.stages) parsed.funnel.stages = defaultData.funnel.stages;
+      if (!parsed.funnel.clientStage) parsed.funnel.clientStage = {};
+      if (!parsed.funnel.trash) parsed.funnel.trash = [];
+      parsed.funnel.trash = parsed.funnel.trash.map(t => {
+        if (t.stageIndex === undefined && t.stage) {
+          const idx = parsed.funnel.stages.indexOf(t.stage);
+          return { ...t, stageIndex: idx >= 0 ? idx : 0 };
+        }
+        return t;
+      });
+      return parsed;
+    } catch(e) { return defaultData; }
+  }
+  function saveData(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    document.dispatchEvent(new CustomEvent('data-updated'));
+  }
+
+  const modals = {};
+  function showModal(modalId) {
+    if (!modals[modalId]) modals[modalId] = document.getElementById(modalId);
+    if (modals[modalId]) modals[modalId].style.display = 'flex';
+    // Для управления стадиями – явно перерисовать
+    if (modalId === 'stagesModal') {
+      window.funnelTabInstance.renderStagesManagement();
+    }
+    window.history.pushState({ modalOpen: modalId }, '');
+  }
+  function hideModal(modalId) {
+    if (modals[modalId]) modals[modalId].style.display = 'none';
+    window.history.back();
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    const tab = document.getElementById(`tab-${tabName}`);
+    if (tab) tab.classList.add('active');
+    const navBtn = document.querySelector(`.nav-item[data-tab="${tabName}"]`);
+    if (navBtn) navBtn.classList.add('active');
+    document.getElementById('headerTitle').textContent =
+      { clients: 'Клиенты', tasks: 'Задачи', funnel: 'Воронка', accounting: 'Бухгалтерия', settings: 'Настройки' }[tabName];
+    document.dispatchEvent(new CustomEvent('tab-switched', { detail: tabName }));
+    window.history.pushState({ tab: tabName }, '');
+  }
+
+  // ===================== КЛИЕНТЫ =====================
+  class ClientsTab {
+    constructor(container) {
+      this.container = container;
+      this.searchQuery = '';
+      this.render();
+      document.addEventListener('data-updated', () => this.render());
+      this.container.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (btn) {
+          if (btn.id === 'addClientFab') showModal('clientModal');
+          if (btn.dataset.action === 'edit') {
+            const id = btn.closest('.list-item')?.dataset.clientId;
+            if (id) this.editClient(id);
+          }
+          if (btn.dataset.action === 'delete') {
+            const id = btn.closest('.list-item')?.dataset.clientId;
+            if (id && confirm('Удалить клиента?')) this.deleteClient(id);
+          }
+          return;
+        }
+        const item = e.target.closest('.list-item');
+        if (item && !e.target.closest('button')) {
+          this.showClientInfo(item.dataset.clientId);
+        }
+      });
+    }
+    deleteClient(id) {
+      let data = loadData();
+      data.clients = data.clients.filter(c => c.id !== id);
+      data.obligations = data.obligations.filter(o => o.clientId !== id);
+      delete data.funnel.clientStage[id];
+      data.funnel.trash = data.funnel.trash.filter(t => t.clientId !== id);
+      saveData(data);
+    }
+    editClient(id) {
+      const data = loadData();
+      const client = data.clients.find(c => c.id === id);
+      if (!client) return;
+      document.getElementById('clientId').value = client.id;
+      document.getElementById('clientFIO').value = client.fio;
+      document.getElementById('clientPhone').value = client.phone || '';
+      document.getElementById('clientEmail').value = client.email || '';
+      document.getElementById('clientAddress').value = client.address || '';
+      document.getElementById('clientDesc').value = client.desc || '';
+      showModal('clientModal');
+    }
+    showClientInfo(id) {
+      const data = loadData();
+      const client = data.clients.find(c => c.id === id);
+      if (!client) return;
+      const obligations = data.obligations.filter(o => o.clientId === id);
+      const content = document.getElementById('clientDetailContent');
+      content.innerHTML = `
+        <p><strong>ФИО:</strong> ${escapeHtml(client.fio)}</p>
+        <p><strong>Телефон:</strong> ${client.phone ? `<a href="tel:${escapeHtml(client.phone)}">${escapeHtml(client.phone)}</a>` : '-'}</p>
+        <p><strong>Email:</strong> ${client.email ? `<a href="mailto:${escapeHtml(client.email)}">${escapeHtml(client.email)}</a>` : '-'}</p>
+        <p><strong>Адрес:</strong> ${escapeHtml(client.address || '-')}</p>
+        <p><strong>Описание:</strong> ${escapeHtml(client.desc || '-')}</p>
+        <h4>Обязательства:</h4>
+        ${obligations.map(o => `<div>📌 ${escapeHtml(o.desc)} (${o.date ? new Date(o.date).toLocaleDateString() : 'без срока'}) - Пред: ${o.prepay}₽, Пост: ${o.postpay}₽</div>`).join('')}
+        <div class="modal-buttons">
+          <button class="btn btn-sm" id="editClientFromDetail">Редактировать</button>
+          <button class="btn btn-sm btn-danger" id="deleteClientFromDetail">Удалить</button>
+        </div>
+      `;
+      document.getElementById('editClientFromDetail').onclick = () => { hideModal('clientDetailModal'); this.editClient(id); };
+      document.getElementById('deleteClientFromDetail').onclick = () => { if(confirm('Удалить клиента?')) { this.deleteClient(id); hideModal('clientDetailModal'); }};
+      showModal('clientDetailModal');
+    }
+    render() {
+      const data = loadData();
+      const filtered = data.clients.filter(c =>
+        c.fio.toLowerCase().includes(this.searchQuery.toLowerCase())
+      );
+      let html = `<input class="search-input" type="text" placeholder="🔍 Поиск клиентов..." value="${escapeHtml(this.searchQuery)}" id="clientSearch">`;
+      html += '<button class="fab" id="addClientFab">+</button>';
+      html += filtered.map(c => `
+        <div class="list-item" data-client-id="${c.id}">
+          <div class="info"><strong>${escapeHtml(c.fio)}</strong></div>
+          <button class="btn btn-sm" data-action="edit">✏️</button>
+          <button class="btn btn-sm btn-danger" data-action="delete">🗑</button>
+        </div>
+      `).join('');
+      if (filtered.length === 0) html += '<p style="text-align:center;color:gray;">Нет клиентов</p>';
+      this.container.innerHTML = html;
+      const searchInput = document.getElementById('clientSearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          this.searchQuery = e.target.value;
+          this.render();
+        });
+      }
+    }
+  }
+
+  // ===================== ЗАДАЧИ =====================
+  class TasksTab {
+    constructor(container) {
+      this.container = container;
+      this.render();
+      document.addEventListener('data-updated', () => this.render());
+      this.container.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.id === 'addTaskFab') {
+          document.getElementById('taskId').value = '';
+          document.getElementById('taskModalTitle').textContent = 'Новое обязательство';
+          showModal('taskModal');
+        }
+        if (btn.dataset.action === 'togglePre') {
+          const id = btn.closest('.list-item')?.dataset.obligId;
+          if (id) this.toggleObligation(id, 'prepaid');
+        }
+        if (btn.dataset.action === 'togglePost') {
+          const id = btn.closest('.list-item')?.dataset.obligId;
+          if (id) this.toggleObligation(id, 'postpaid');
+        }
+        if (btn.dataset.action === 'edit') {
+          const id = btn.closest('.list-item')?.dataset.obligId;
+          if (id) this.editObligation(id);
+        }
+        if (btn.dataset.action === 'delete') {
+          const id = btn.closest('.list-item')?.dataset.obligId;
+          if (id && confirm('Удалить задачу?')) this.deleteObligation(id);
+        }
+      });
+    }
+    toggleObligation(id, field) {
+      let data = loadData();
+      const obl = data.obligations.find(o => o.id === id);
+      if (!obl) return;
+      obl[field] = !obl[field];
+      saveData(data);
+    }
+    editObligation(id) {
+      const data = loadData();
+      const obl = data.obligations.find(o => o.id === id);
+      if (!obl) return;
+      document.getElementById('taskId').value = obl.id;
+      document.getElementById('taskClientSelect').value = obl.clientId;
+      document.getElementById('taskDesc').value = obl.desc;
+      document.getElementById('taskPrepay').value = obl.prepay;
+      document.getElementById('taskPostpay').value = obl.postpay;
+      document.getElementById('taskCosts').value = obl.costs;
+      document.getElementById('taskDate').value = obl.date;
+      document.getElementById('taskModalTitle').textContent = 'Редактировать обязательство';
+      showModal('taskModal');
+    }
+    deleteObligation(id) {
+      let data = loadData();
+      data.obligations = data.obligations.filter(o => o.id !== id);
+      saveData(data);
+    }
+    render() {
+      const data = loadData();
+      const obligations = [...data.obligations].sort((a,b) => {
+        if (a.date && b.date) return new Date(a.date) - new Date(b.date);
+        if (a.date) return -1;
+        if (b.date) return 1;
+        return parseInt(b.id) - parseInt(a.id);
+      });
+      const today = new Date(); today.setHours(0,0,0,0);
+      let html = '<button class="fab" id="addTaskFab">+</button>';
+      obligations.forEach(o => {
+        const client = data.clients.find(c => c.id === o.clientId);
+        const clientName = client ? client.fio : 'Неизвестный';
+        const dateStr = o.date ? new Date(o.date).toLocaleDateString() : 'без срока';
+        const overdue = o.date && new Date(o.date) < today ? 'style="border-left:4px solid var(--danger);"' : '';
+        html += `<div class="list-item" data-oblig-id="${o.id}" ${overdue}>
+          <div class="info"><strong>${escapeHtml(clientName)}</strong>: ${escapeHtml(o.desc)}<br><small>📅 ${dateStr} | 💰 ${o.prepay}/${o.postpay}₽</small></div>
+          <div class="actions">
+            <button class="btn btn-sm ${o.prepaid ? 'btn-success' : ''}" data-action="togglePre" title="Отметить предоплату">Прд</button>
+            <button class="btn btn-sm ${o.postpaid ? 'btn-success' : ''}" data-action="togglePost" title="Отметить постоплату">Пст</button>
+            <button class="btn btn-sm" data-action="edit" title="Редактировать">✏️</button>
+            <button class="btn btn-sm btn-danger" data-action="delete" title="Удалить">🗑</button>
+          </div>
+        </div>`;
+      });
+      if (obligations.length === 0) html += '<p style="text-align:center;color:gray;">Нет задач</p>';
+      this.container.innerHTML = html;
+    }
+  }
+
+  // ===================== ВОРОНКА =====================
+  class FunnelTab {
+    constructor(container) {
+      this.container = container;
+      window.funnelTabInstance = this; // для доступа из showModal
+      this.render();
+      document.addEventListener('data-updated', () => this.render());
+      this.container.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.id === 'addToFunnelBtn') this.showAddToFunnel();
+        if (btn.id === 'trashBtn') this.showTrash();
+        if (btn.id === 'manageStagesBtn') showModal('stagesModal');
+        if (btn.dataset.move) {
+          const [cid, dir] = btn.dataset.move.split(',');
+          this.moveClient(cid, dir);
+        }
+        if (btn.dataset.trashClient) {
+          if (confirm('Удалить клиента в мусорку?')) this.sendToTrash(btn.dataset.trashClient);
+        }
+      });
+    }
+    moveClient(clientId, direction) {
+      let data = loadData();
+      const stagesCount = data.funnel.stages.length;
+      let cur = data.funnel.clientStage[clientId] ?? 0;
+      if (direction === 'right') cur = Math.min(cur + 1, stagesCount - 1);
+      else cur = Math.max(cur - 1, 0);
+      data.funnel.clientStage[clientId] = cur;
+      saveData(data);
+    }
+    sendToTrash(clientId) {
+      let data = loadData();
+      const client = data.clients.find(c => c.id === clientId);
+      if (!client) return;
+      const stageIdx = data.funnel.clientStage[clientId] ?? 0;
+      data.funnel.trash.push({
+        clientId,
+        clientName: client.fio,
+        stageIndex: stageIdx,
+        dateRemoved: new Date().toISOString()
+      });
+      delete data.funnel.clientStage[clientId];
+      saveData(data);
+    }
+    showTrash() {
+      const data = loadData();
+      const trash = data.funnel.trash;
+      const content = document.getElementById('trashContent');
+      const stats = {};
+      trash.forEach(t => {
+        const stageName = data.funnel.stages[t.stageIndex] || 'Неизвестно';
+        stats[stageName] = (stats[stageName] || 0) + 1;
+      });
+      let html = trash.map(t => {
+        const stageName = data.funnel.stages[t.stageIndex] || 'Неизвестно';
+        return `<div class="list-item"><span>${escapeHtml(t.clientName)} — этап «${escapeHtml(stageName)}»</span>
+          <button class="btn btn-sm" data-restore="${t.clientId}">↩️</button></div>`;
+      }).join('');
+      html += '<div class="trash-stats" style="margin-top:12px;"><strong>Статистика отвалов:</strong><br>';
+      for (const [stage, count] of Object.entries(stats)) html += `${escapeHtml(stage)}: ${count}<br>`;
+      html += '</div>';
+      html += '<button id="clearTrashBtn" class="btn btn-danger btn-sm" style="margin-top:12px;">Очистить всё</button>';
+      content.innerHTML = html;
+      showModal('trashModal');
+      document.querySelectorAll('[data-restore]').forEach(btn => {
+        btn.onclick = () => {
+          let d = loadData();
+          const id = btn.dataset.restore;
+          const item = d.funnel.trash.find(t => t.clientId === id);
+          if (item) {
+            d.funnel.clientStage[id] = item.stageIndex;
+            d.funnel.trash = d.funnel.trash.filter(t => t.clientId !== id);
+            saveData(d);
+            this.showTrash();
+          }
+        };
+      });
+      document.getElementById('clearTrashBtn').onclick = () => {
+        if (confirm('Очистить всю мусорку?')) {
+          let d = loadData();
+          d.funnel.trash = [];
+          saveData(d);
+          hideModal('trashModal');
+          showToast('Мусорка очищена');
+        }
+      };
+    }
+    showAddToFunnel() {
+      const data = loadData();
+      const inFunnel = new Set(Object.keys(data.funnel.clientStage));
+      const inTrash = new Set(data.funnel.trash.map(t => t.clientId));
+      const available = data.clients.filter(c => !inFunnel.has(c.id) && !inTrash.has(c.id));
+      const content = document.getElementById('addToFunnelContent');
+      content.innerHTML = available.length ? available.map(c => `<div class="list-item" data-cid="${c.id}">${escapeHtml(c.fio)}<button class="btn btn-sm">+</button></div>`).join('')
+        : '<p>Все клиенты уже в воронке или в мусорке</p>';
+      showModal('addToFunnelModal');
+      content.querySelectorAll('.list-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const cid = item.dataset.cid;
+          if (!cid) return;
+          let d = loadData();
+          d.funnel.clientStage[cid] = 0;
+          saveData(d);
+          hideModal('addToFunnelModal');
+        });
+      });
+    }
+    renderStagesManagement() {
+      const data = loadData();
+      const container = document.getElementById('stagesList');
+      if (!container) return;
+      container.innerHTML = data.funnel.stages.map((s, idx) => `
+        <div style="display:flex; align-items:center; margin-bottom:8px;">
+          <input type="text" value="${escapeHtml(s)}" data-stage-idx="${idx}" style="flex:1;">
+          <button class="btn btn-sm" data-move-stage="${idx},up" ${idx===0?'disabled':''}>↑</button>
+          <button class="btn btn-sm" data-move-stage="${idx},down" ${idx===data.funnel.stages.length-1?'disabled':''}>↓</button>
+          <button class="btn btn-sm btn-danger" data-del-stage="${idx}" style="margin-left:4px;">🗑</button>
+        </div>
+      `).join('');
+      container.querySelectorAll('input').forEach(inp => {
+        inp.addEventListener('change', () => {
+          const idx = parseInt(inp.dataset.stageIdx);
+          let d = loadData();
+          d.funnel.stages[idx] = inp.value.trim() || d.funnel.stages[idx];
+          saveData(d);
+        });
+      });
+      container.querySelectorAll('[data-move-stage]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const [idx, dir] = btn.dataset.moveStage.split(',');
+          const i = parseInt(idx);
+          let d = loadData();
+          const stages = d.funnel.stages;
+          if (dir === 'up' && i > 0) {
+            [stages[i], stages[i-1]] = [stages[i-1], stages[i]];
+            for (const [cid, s] of Object.entries(d.funnel.clientStage)) {
+              if (s === i) d.funnel.clientStage[cid] = i-1;
+              else if (s === i-1) d.funnel.clientStage[cid] = i;
+            }
+            for (const item of d.funnel.trash) {
+              if (item.stageIndex === i) item.stageIndex = i-1;
+              else if (item.stageIndex === i-1) item.stageIndex = i;
+            }
+          } else if (dir === 'down' && i < stages.length-1) {
+            [stages[i], stages[i+1]] = [stages[i+1], stages[i]];
+            for (const [cid, s] of Object.entries(d.funnel.clientStage)) {
+              if (s === i) d.funnel.clientStage[cid] = i+1;
+              else if (s === i+1) d.funnel.clientStage[cid] = i;
+            }
+            for (const item of d.funnel.trash) {
+              if (item.stageIndex === i) item.stageIndex = i+1;
+              else if (item.stageIndex === i+1) item.stageIndex = i;
+            }
+          }
+          saveData(d);
+          this.renderStagesManagement();
+        });
+      });
+      container.querySelectorAll('[data-del-stage]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.delStage);
+          const d = loadData();
+          const movedCount = Object.values(d.funnel.clientStage).filter(s => s === idx).length +
+            d.funnel.trash.filter(t => t.stageIndex === idx).length;
+          if (!confirm(`Удалить стадию «${d.funnel.stages[idx]}»? ${movedCount} клиентов будут перенесены на предыдущую стадию.`)) return;
+          if (d.funnel.stages.length <= 1) return;
+          const newIdx = idx === 0 ? 0 : idx - 1;
+          for (const [cid, s] of Object.entries(d.funnel.clientStage)) {
+            if (s === idx) d.funnel.clientStage[cid] = newIdx;
+            else if (s > idx) d.funnel.clientStage[cid] = s - 1;
+          }
+          for (const item of d.funnel.trash) {
+            if (item.stageIndex === idx) item.stageIndex = newIdx;
+            else if (item.stageIndex > idx) item.stageIndex -= 1;
+          }
+          d.funnel.stages.splice(idx, 1);
+          saveData(d);
+          this.renderStagesManagement();
+        });
+      });
+      document.getElementById('addStageBtn').onclick = () => {
+        const name = document.getElementById('newStageName').value.trim();
+        if (!name) return;
+        let d = loadData();
+        d.funnel.stages.push(name);
+        saveData(d);
+        document.getElementById('newStageName').value = '';
+        this.renderStagesManagement();
+      };
+    }
+    render() {
+      const data = loadData();
+      let html = '<div style="display:flex; justify-content:space-between; margin-bottom:12px;">';
+      html += '<button class="btn btn-sm" id="trashBtn">🗑️ Мусорка</button>';
+      html += '<button class="btn btn-sm" id="addToFunnelBtn">+ Клиент</button>';
+      html += '</div>';
+      html += '<div class="funnel-columns">';
+      data.funnel.stages.forEach((stage, idx) => {
+        const clientsInStage = Object.entries(data.funnel.clientStage)
+          .filter(([_, s]) => s === idx)
+          .map(([cid]) => data.clients.find(c => c.id === cid))
+          .filter(Boolean);
+        html += `<div class="funnel-col"><h3>${escapeHtml(stage)}</h3>`;
+        clientsInStage.forEach(client => {
+          html += `<div class="funnel-card">
+            <span>${escapeHtml(client.fio)}</span>
+            <div>
+              <button class="btn btn-sm" data-move="${client.id},left">←</button>
+              <button class="btn btn-sm" data-move="${client.id},right">→</button>
+              <button class="btn btn-sm btn-warning" data-trash-client="${client.id}">🗑</button>
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<button class="btn btn-sm" id="manageStagesBtn" style="margin-top:10px;">Управление стадиями</button>';
+      this.container.innerHTML = html;
+    }
+  }
+
+  // ===================== БУХГАЛТЕРИЯ =====================
+  class AccountingTab {
+    constructor(container) {
+      this.container = container;
+      document.addEventListener('data-updated', () => this.render());
+      this.render();
+    }
+    getFiltered(filter = null) {
+      const data = loadData();
+      if (!filter) {
+        const periodSelect = this.container.querySelector('#periodSelect');
+        const dateFrom = this.container.querySelector('#dateFrom');
+        const dateTo = this.container.querySelector('#dateTo');
+        if (!periodSelect) return data.obligations;
+        const period = periodSelect.value;
+        filter = { period, customFrom: dateFrom?.value, customTo: dateTo?.value };
+      }
+      const { period, customFrom, customTo } = filter;
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return data.obligations.filter(o => {
+        if (!o.date) return period === 'all';
+        const d = new Date(o.date);
+        switch(period) {
+          case 'today': return d >= todayStart && d < new Date(todayStart.getTime() + 86400000);
+          case 'week': {
+            const day = now.getDay() || 7;
+            const mon = new Date(now); mon.setDate(now.getDate()-day+1); mon.setHours(0,0,0,0);
+            const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+            return d>=mon && d<=sun;
+          }
+          case 'month': return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+          case 'year': return d.getFullYear()===now.getFullYear();
+          case 'lastMonth': {
+            const lm = new Date(now.getFullYear(), now.getMonth()-1,1);
+            const lme = new Date(now.getFullYear(), now.getMonth(),0); lme.setHours(23,59,59,999);
+            return d>=lm && d<=lme;
+          }
+          case 'lastYear': return d.getFullYear()===now.getFullYear()-1;
+          case 'custom': {
+            const from = customFrom ? new Date(customFrom) : null;
+            const to = customTo ? new Date(customTo) : null;
+            if (from) from.setHours(0,0,0,0);
+            if (to) to.setHours(23,59,59,999);
+            if (from && to) return d>=from && d<=to;
+            if (from) return d>=from;
+            if (to) return d<=to;
+            return true;
+          }
+          default: return true;
+        }
+      });
+    }
+    exportCSV(all = false) {
+      const filtered = all ? loadData().obligations : this.getFiltered();
+      const data = loadData();
+      const clientsMap = new Map(data.clients.map(c => [c.id, c.fio]));
+      let csv = 'Клиент,Описание,Дата,Предоплата,Предоплата получена,Постоплата,Постоплата получена,Затраты\n';
+      filtered.forEach(o => {
+        csv += [
+          escapeCSV(clientsMap.get(o.clientId) || ''),
+          escapeCSV(o.desc),
+          escapeCSV(o.date || ''),
+          o.prepay,
+          o.prepaid ? 'Да' : 'Нет',
+          o.postpay,
+          o.postpaid ? 'Да' : 'Нет',
+          o.costs
+        ].join(',') + '\n';
+      });
+      const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'accounting.csv'; a.click();
+    }
+    render() {
+      const filtered = this.getFiltered();
+      const s = {
+        expPre: 0, recPre: 0,
+        expPost: 0, recPost: 0,
+        costs: 0
+      };
+      filtered.forEach(o => {
+        if (!o.prepaid) s.expPre += o.prepay;
+        else s.recPre += o.prepay;
+        if (!o.postpaid) s.expPost += o.postpay;
+        else s.recPost += o.postpay;
+        s.costs += o.costs;
+      });
+      const profit = s.recPre + s.recPost - s.costs;
+
+      this.container.innerHTML = `
+        <div class="card">
+          <select id="periodSelect" style="width:100%; margin-bottom:8px;">
+            <option value="all">Всё время</option>
+            <option value="today">Сегодня</option>
+            <option value="week">Неделя</option>
+            <option value="month">Месяц</option>
+            <option value="year">Год</option>
+            <option value="lastMonth">Прошлый месяц</option>
+            <option value="lastYear">Прошлый год</option>
+            <option value="custom">Произвольный</option>
+          </select>
+          <div id="customRange" style="display:none; gap:8px; margin-bottom:8px;">
+            <input type="date" id="dateFrom"><input type="date" id="dateTo">
+          </div>
+          <div class="summary-grid">
+            <div class="summary-card">
+              <h4>Предоплаты к получению</h4>
+              <div class="value">${s.expPre.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Получено предоплат</h4>
+              <div class="value" style="color:green">${s.recPre.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Постоплаты к получению</h4>
+              <div class="value">${s.expPost.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Получено постоплат</h4>
+              <div class="value" style="color:green">${s.recPost.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Затраты</h4>
+              <div class="value" style="color:red">${s.costs.toFixed(2)}₽</div>
+            </div>
+            <div class="summary-card">
+              <h4>Чистая прибыль</h4>
+              <div class="value">${profit.toFixed(2)}₽</div>
+            </div>
+          </div>
+          <button id="exportBtn" class="btn btn-primary" style="width:100%;">📥 Экспорт CSV</button>
+        </div>
+      `;
+
+      const periodSelect = this.container.querySelector('#periodSelect');
+      const customRange = this.container.querySelector('#customRange');
+      const dateFrom = this.container.querySelector('#dateFrom');
+      const dateTo = this.container.querySelector('#dateTo');
+      const exportBtn = this.container.querySelector('#exportBtn');
+
+      if (periodSelect) {
+        periodSelect.addEventListener('change', () => {
+          if (customRange) customRange.style.display = periodSelect.value === 'custom' ? 'flex' : 'none';
+          this.render();
+        });
+      }
+      if (exportBtn) {
+        exportBtn.addEventListener('click', () => this.exportCSV());
+      }
+      if (dateFrom) dateFrom.addEventListener('change', () => this.render());
+      if (dateTo) dateTo.addEventListener('change', () => this.render());
+      if (customRange) customRange.style.display = periodSelect?.value === 'custom' ? 'flex' : 'none';
+    }
+  }
+
+  // ===================== НАСТРОЙКИ =====================
+  class SettingsTab {
+    constructor(container) {
+      this.container = container;
+      this.render();
+    }
+    render() {
+      this.container.innerHTML = `
+        <div class="card">
+          <h3>💾 Резервное копирование</h3>
+          <button id="downloadBackupBtn" class="btn btn-primary" style="width:100%; margin-bottom:8px; padding:12px;">📥 Скачать резервную копию сейчас</button>
+          <button id="uploadBackupBtn" class="btn" style="width:100%; padding:12px;">📤 Загрузить резервную копию</button>
+          <input type="file" id="backupFileInput" accept=".json" hidden>
+        </div>
+        <div class="card">
+          <h3>📤 Экспорт / Импорт данных по разделам</h3>
+          <button class="btn btn-sm export-json" data-export="clients" style="width:100%; margin-bottom:6px;">👥 Клиенты JSON</button>
+          <button class="btn btn-sm export-json" data-export="tasks" style="width:100%; margin-bottom:6px;">📋 Задачи JSON</button>
+          <button class="btn btn-sm export-json" data-export="funnel" style="width:100%; margin-bottom:6px;">📊 Воронка JSON</button>
+          <button class="btn btn-sm export-json" data-export="accounting" style="width:100%; margin-bottom:12px;">💰 Бухгалтерия JSON</button>
+          <input type="file" id="importJsonInput" accept=".json" hidden>
+          <button id="importJsonBtn" class="btn" style="width:100%; padding:12px;">📤 Импортировать JSON (выбранный файл)</button>
+        </div>
+        <div class="card">
+          <h3>📤 Экспорт CSV</h3>
+          <button id="exportClientsBtn" class="btn" style="width:100%; margin-bottom:6px; padding:12px;">👥 Клиенты CSV</button>
+          <button id="exportTasksBtn" class="btn" style="width:100%; margin-bottom:6px; padding:12px;">📋 Задачи CSV</button>
+          <button id="exportFunnelBtn" class="btn" style="width:100%; margin-bottom:6px; padding:12px;">📊 Воронка CSV</button>
+          <button id="exportAccountingBtn" class="btn" style="width:100%; padding:12px;">💰 Бухгалтерия CSV (все)</button>
+        </div>
+        <div class="card">
+          <h3>🛠️ Управление</h3>
+          <button id="resetDataBtn" class="btn btn-danger" style="width:100%; margin-bottom:12px; padding:12px;">🗑️ Сбросить все данные</button>
+          <button id="showConsentAgain" class="btn" style="width:100%; padding:12px;">📄 Пользовательское соглашение</button>
+        </div>
+        <div class="card">
+          <h3>ℹ️ О приложении</h3>
+          <a href="https://boosty.to/ilyasishmukhametov" target="_blank" style="display:block; padding:10px 0; text-decoration:none;">❤️ Поддержать на Boosty</a>
+          <a href="https://www.donationalerts.com/r/ilyas_donationalerts" target="_blank" style="display:block; padding:10px 0; text-decoration:none;">💲 DonationAlerts</a>
+          <a href="https://vk.ru/composerbloknot" target="_blank" style="display:block; padding:10px 0; text-decoration:none;">✉️ Обратная связь ВК</a>
+          <a href="https://github.com/Ilyasmusic/ilyascrm" target="_blank" style="display:block; padding:10px 0; text-decoration:none;">👨‍💻 Исходный код на GitHub</a>
+          <p style="margin-top:16px; text-align:center; font-size:0.8rem;">© 2026 Бизнес Соло</p>
+        </div>
+      `;
+
+      // Обработчики
+      document.getElementById('downloadBackupBtn').onclick = () => {
+        const blob = new Blob([JSON.stringify(loadData())], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click();
+      };
+      document.getElementById('uploadBackupBtn').onclick = () => document.getElementById('backupFileInput').click();
+      document.getElementById('backupFileInput').onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            if (imported.clients && imported.obligations) {
+              if (confirm('Заменить данные?')) { saveData(imported); showToast('Данные импортированы'); }
+            } else showToast('Неверный формат файла');
+          } catch { showToast('Ошибка чтения файла'); }
+        };
+        reader.readAsText(file);
+      };
+
+      // Экспорт отдельных разделов JSON
+      this.container.querySelectorAll('.export-json').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const type = btn.dataset.export;
+          const data = loadData();
+          let exportData;
+          switch(type) {
+            case 'clients': exportData = { clients: data.clients }; break;
+            case 'tasks': exportData = { obligations: data.obligations }; break;
+            case 'funnel': exportData = { funnel: data.funnel }; break;
+            case 'accounting': exportData = { obligations: data.obligations, clients: data.clients }; break;
+          }
+          const blob = new Blob([JSON.stringify(exportData)], {type:'application/json'});
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${type}.json`; a.click();
+        });
+      });
+
+      // Импорт JSON (слияние)
+      document.getElementById('importJsonBtn').onclick = () => document.getElementById('importJsonInput').click();
+      document.getElementById('importJsonInput').onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            if (!confirm('Импортировать данные из файла? Будут добавлены только новые записи.')) return;
+            const data = loadData();
+            if (imported.clients) {
+              const existingIds = new Set(data.clients.map(c=>c.id));
+              data.clients.push(...imported.clients.filter(c => !existingIds.has(c.id)));
+            }
+            if (imported.obligations) {
+              const existingIds = new Set(data.obligations.map(o=>o.id));
+              data.obligations.push(...imported.obligations.filter(o => !existingIds.has(o.id)));
+            }
+            if (imported.funnel) {
+              if (imported.funnel.stages) data.funnel.stages = imported.funnel.stages;
+              if (imported.funnel.clientStage) Object.assign(data.funnel.clientStage, imported.funnel.clientStage);
+              if (imported.funnel.trash) data.funnel.trash = imported.funnel.trash;
+            }
+            saveData(data);
+            showToast('Импорт завершён');
+          } catch { showToast('Ошибка чтения файла'); }
+        };
+        reader.readAsText(file);
+      };
+
+      document.getElementById('exportClientsBtn').onclick = () => {
+        const data = loadData();
+        let csv = 'ФИО,Телефон,Email,Адрес,Описание\n';
+        data.clients.forEach(c => csv += `${escapeCSV(c.fio)},${escapeCSV(c.phone||'')},${escapeCSV(c.email||'')},${escapeCSV(c.address||'')},${escapeCSV(c.desc||'')}\n`);
+        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'clients.csv'; a.click();
+      };
+      document.getElementById('exportTasksBtn').onclick = () => {
+        const data = loadData(); const map = new Map(data.clients.map(c=>[c.id,c.fio]));
+        let csv = 'Клиент,Описание,Дата,Предоплата,Постоплата,Затраты\n';
+        data.obligations.forEach(o => csv += `${escapeCSV(map.get(o.clientId)||'')},${escapeCSV(o.desc)},${escapeCSV(o.date||'')},${o.prepay},${o.postpay},${o.costs}\n`);
+        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tasks.csv'; a.click();
+      };
+      document.getElementById('exportFunnelBtn').onclick = () => {
+        const data = loadData();
+        let csv = 'Клиент,Стадия\n';
+        for (const [cid, idx] of Object.entries(data.funnel.clientStage)) {
+          const client = data.clients.find(c=>c.id===cid);
+          csv += `${escapeCSV(client?.fio||'')},${escapeCSV(data.funnel.stages[idx]||'')}\n`;
+        }
+        const blob = new Blob(['\uFEFF'+csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'funnel.csv'; a.click();
+      };
+      document.getElementById('exportAccountingBtn').onclick = () => {
+        const temp = new AccountingTab(document.createElement('div'));
+        temp.exportCSV(true);
+      };
+      document.getElementById('resetDataBtn').onclick = () => {
+        if (confirm('Вы уверены? Это удалит всех клиентов, задачи и воронку безвозвратно.')) {
+          saveData({ clients: [], obligations: [], funnel: { stages: ['Созвонились', 'Договорились о цене', 'Получена предоплата', 'Выполнено'], clientStage: {}, trash: [] } });
+          showToast('Все данные сброшены');
+        }
+      };
+      document.getElementById('showConsentAgain').onclick = () => showModal('consentModal');
+    }
+  }
+
+  // ===================== ИНИЦИАЛИЗАЦИЯ =====================
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="clientModal" class="modal-overlay" style="display:none;"><div class="modal">
+        <h3>Добавить клиента</h3>
+        <input type="hidden" id="clientId">
+        <div class="form-group"><label>ФИО</label><input id="clientFIO" required></div>
+        <div class="form-group"><label>Телефон</label><input id="clientPhone"></div>
+        <div class="form-group"><label>Email</label><input id="clientEmail"></div>
+        <div class="form-group"><label>Адрес</label><input id="clientAddress"></div>
+        <div class="form-group"><label>Описание</label><textarea id="clientDesc" rows="2"></textarea></div>
+        <div class="modal-buttons"><button class="btn" onclick="hideModal('clientModal')">Отмена</button><button class="btn btn-primary" id="saveClientBtn">Сохранить</button></div>
+      </div></div>
+      <div id="taskModal" class="modal-overlay" style="display:none;"><div class="modal">
+        <h3 id="taskModalTitle">Новое обязательство</h3>
+        <input type="hidden" id="taskId">
+        <div class="form-group"><label>Клиент</label><select id="taskClientSelect"></select></div>
+        <div class="form-group"><label>Описание</label><input id="taskDesc" placeholder="Например: Полить цветы"></div>
+        <div class="form-group"><label>Предоплата, ₽</label><input type="number" id="taskPrepay" value="0" step="0.01"></div>
+        <div class="form-group"><label>Постоплата, ₽</label><input type="number" id="taskPostpay" value="0" step="0.01"></div>
+        <div class="form-group"><label>Затраты, ₽</label><input type="number" id="taskCosts" value="0" step="0.01"></div>
+        <div class="form-group"><label>Дата и время</label><input type="datetime-local" id="taskDate"></div>
+        <div class="modal-buttons"><button class="btn" onclick="hideModal('taskModal')">Отмена</button><button class="btn btn-primary" id="saveTaskBtn">Сохранить</button></div>
+      </div></div>
+      <div id="clientDetailModal" class="modal-overlay" style="display:none;"><div class="modal"><div id="clientDetailContent"></div><button class="btn" onclick="hideModal('clientDetailModal')">Закрыть</button></div></div>
+      <div id="trashModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>🗑️ Мусорка</h3><div id="trashContent"></div><button class="btn" onclick="hideModal('trashModal')">Закрыть</button></div></div>
+      <div id="addToFunnelModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>Добавить клиента в воронку</h3><div id="addToFunnelContent"></div><button class="btn" onclick="hideModal('addToFunnelModal')">Закрыть</button></div></div>
+      <div id="stagesModal" class="modal-overlay" style="display:none;"><div class="modal"><h3>Управление стадиями</h3><div id="stagesList"></div><input id="newStageName" placeholder="Новая стадия" style="width:100%; margin-top:8px;"><button id="addStageBtn" class="btn btn-primary" style="width:100%; margin-top:4px;">Добавить</button><button class="btn" onclick="hideModal('stagesModal')" style="width:100%; margin-top:8px;">Закрыть</button></div></div>
+    `);
+
+    const consentKey = 'privacyAccepted';
+    if (localStorage.getItem(consentKey) !== 'true') {
+      showModal('consentModal');
+      document.getElementById('consentCheckbox').addEventListener('change', function() {
+        document.getElementById('acceptConsentBtn').disabled = !this.checked;
+      });
+      document.getElementById('acceptConsentBtn').addEventListener('click', () => {
+        if (document.getElementById('consentCheckbox').checked) {
+          localStorage.setItem(consentKey, 'true');
+          hideModal('consentModal');
+          document.getElementById('mainUI').style.display = 'flex';
+          initApp();
+        }
+      });
+    } else {
+      document.getElementById('mainUI').style.display = 'flex';
+      initApp();
+    }
+
+    function initApp() {
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      });
+
+      new ClientsTab(document.getElementById('tab-clients'));
+      new TasksTab(document.getElementById('tab-tasks'));
+      new FunnelTab(document.getElementById('tab-funnel'));
+      new AccountingTab(document.getElementById('tab-accounting'));
+      new SettingsTab(document.getElementById('tab-settings'));
+
+      document.getElementById('saveClientBtn').addEventListener('click', () => {
+        const id = document.getElementById('clientId').value;
+        const fio = document.getElementById('clientFIO').value.trim();
+        if (!fio) return showToast('ФИО обязательно', 2000);
+        const client = {
+          id: id || Date.now().toString(),
+          fio, phone: document.getElementById('clientPhone').value,
+          email: document.getElementById('clientEmail').value,
+          address: document.getElementById('clientAddress').value,
+          desc: document.getElementById('clientDesc').value
+        };
+        let data = loadData();
+        if (id) {
+          const idx = data.clients.findIndex(c => c.id === id);
+          if (idx !== -1) data.clients[idx] = client;
+        } else data.clients.push(client);
+        saveData(data);
+        hideModal('clientModal');
+      });
+
+      document.getElementById('saveTaskBtn').addEventListener('click', () => {
+        const id = document.getElementById('taskId').value;
+        const clientId = document.getElementById('taskClientSelect').value;
+        const desc = document.getElementById('taskDesc').value.trim();
+        if (!clientId || !desc) return showToast('Заполните клиента и описание');
+        const task = {
+          id: id || Date.now().toString(),
+          clientId, desc,
+          prepay: parseFloat(document.getElementById('taskPrepay').value) || 0,
+          postpay: parseFloat(document.getElementById('taskPostpay').value) || 0,
+          prepaid: false, postpaid: false,
+          costs: parseFloat(document.getElementById('taskCosts').value) || 0,
+          date: document.getElementById('taskDate').value
+        };
+        let data = loadData();
+        if (id) {
+          const index = data.obligations.findIndex(o => o.id === id);
+          if (index !== -1) data.obligations[index] = task;
+        } else data.obligations.push(task);
+        saveData(data);
+        hideModal('taskModal');
+      });
+
+      function updateTaskClientSelect() {
+        const data = loadData();
+        const select = document.getElementById('taskClientSelect');
+        if (select) select.innerHTML = '<option value="">Выберите клиента</option>' + data.clients.map(c => `<option value="${c.id}">${escapeHtml(c.fio)}</option>`).join('');
+      }
+      document.addEventListener('data-updated', updateTaskClientSelect);
+      updateTaskClientSelect();
+
+      // Закрытие модалок по клику на оверлей и Escape
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function(e) {
+          if (e.target === this) this.style.display = 'none';
+        });
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal-overlay[style*="display: flex"]').forEach(overlay => {
+            overlay.style.display = 'none';
+          });
+        }
+      });
+    }
+
+    // Навигация по истории (аппаратная кнопка Назад)
+    window.addEventListener('popstate', function(event) {
+      if (event.state) {
+        if (event.state.modalOpen) {
+          const modalId = event.state.modalOpen;
+          if (modals[modalId]) modals[modalId].style.display = 'none';
+        } else if (event.state.tab) {
+          // ничего не делаем, просто предотвращаем дальнейший back
+        }
+      }
+    });
+  });
+</script>
+</body>
+</html>
