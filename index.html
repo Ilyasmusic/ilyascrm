@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Бизнес Соло — Микро CRM</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <!-- Экран блокировки PIN -->
+  <div id="lockScreen">
+    <div class="card" style="width:100%;">
+      <h3>🔒 Введите PIN-код</h3>
+      <div class="pin-display" id="pinDisplay">****</div>
+      <div class="pin-keypad" id="pinKeypad">
+        <button class="pin-key" data-digit="1">1</button>
+        <button class="pin-key" data-digit="2">2</button>
+        <button class="pin-key" data-digit="3">3</button>
+        <button class="pin-key" data-digit="4">4</button>
+        <button class="pin-key" data-digit="5">5</button>
+        <button class="pin-key" data-digit="6">6</button>
+        <button class="pin-key" data-digit="7">7</button>
+        <button class="pin-key" data-digit="8">8</button>
+        <button class="pin-key" data-digit="9">9</button>
+        <button class="pin-key pin-key--empty"></button>
+        <button class="pin-key" data-digit="0">0</button>
+        <button class="pin-key pin-key--delete" id="pinDelete">⌫</button>
+      </div>
+      <button id="unlockBtn" class="btn btn-primary" style="width:100%; margin-top:8px;">Войти</button>
+      <div class="modal-buttons">
+        <button id="forgotPinBtn" class="btn" style="width:100%;">Забыли пароль?</button>
+      </div>
+      <div id="recoveryBlock" style="display:none; margin-top:12px;">
+        <p style="font-size:0.85rem;">Введите код восстановления для сброса PIN.</p>
+        <input type="text" id="recoveryCodeInput" placeholder="Код из 8 цифр" style="margin-bottom:8px;" maxlength="8" inputmode="numeric">
+        <button id="recoverySubmitBtn" class="btn btn-warning" style="width:100%;">Сбросить PIN</button>
+        <button id="cancelRecoveryBtn" class="btn btn-sm" style="width:100%; margin-top:4px;">Отмена</button>
+      </div>
+      <button id="fullResetBtn" class="btn btn-danger" style="display:none; width:100%; margin-top:12px;">🗑 Полная очистка данных</button>
+    </div>
+  </div>
+
+  <!-- Основной интерфейс -->
+  <div id="mainUI" style="display:none; flex-direction:column; height:100%;">
+    <div class="app-header">
+      <span id="headerTitle">Клиенты</span>
+      <span class="last-backup" id="lastBackupLabel">Бэкап: никогда</span>
+    </div>
+    <div class="app-content" id="appContent">
+      <div id="tab-clients" class="tab-content active"></div>
+      <div id="tab-tasks" class="tab-content"></div>
+      <div id="tab-funnel" class="tab-content"></div>
+      <div id="tab-accounting" class="tab-content"></div>
+      <div id="tab-settings" class="tab-content"></div>
+    </div>
+    <div class="bottom-nav">
+      <button class="nav-item active" data-tab="clients"><span class="nav-icon">👥</span>Клиенты</button>
+      <button class="nav-item" data-tab="tasks"><span class="nav-icon">📋</span>Задачи</button>
+      <button class="nav-item" data-tab="funnel"><span class="nav-icon">📊</span>Воронка</button>
+      <button class="nav-item" data-tab="accounting"><span class="nav-icon">💰</span>Бухгалтерия</button>
+      <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>Настройки</button>
+    </div>
+  </div>
+</div>
+
+<!-- Контейнер для тостов -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- ================= МОДАЛЬНЫЕ ОКНА ================= -->
+
+<!-- Соглашение (первичное и повторное) -->
+<div id="consentModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>📄 Политика конфиденциальности и условия использования «Бизнес Соло»</h3>
+    <div class="policy-text" style="font-size:0.85rem; line-height:1.5; max-height:300px; overflow-y:auto; margin-bottom:12px;">
+      <strong>Версия тестовой сборки beta v.1.0.0</strong><br><br>
+      <strong>Дата последнего обновления: 30 апреля 2026 года</strong><br><br>
+      Настоящий документ разработан в соответствии с Федеральным законом от 27.07.2006 №152-ФЗ «О персональных данных», Федеральным законом от 27.07.2006 №149-ФЗ «Об информации, информационных технологиях и о защите информации» и иными нормативными правовыми актами Российской Федерации.<br><br>
+      1. <strong>Общие положения</strong><br>
+      Приложение «Бизнес Соло» (далее — «Приложение») функционирует исключительно на устройстве Пользователя. Вся информация, вносимая в Приложение (включая, но не ограничиваясь: фамилии, имена, отчества, номера телефонов, адреса электронной почты, физические адреса, финансовые показатели), сохраняется локально с использованием механизма localStorage веб-браузера, входящего в состав Приложения.<br><br>
+      2. <strong>Порядок обработки персональных данных</strong><br>
+      Пользователь самостоятельно определяет цели обработки персональных данных, состав обрабатываемых персональных данных, а также действия (операции), совершаемые с ними. В рамках использования Приложения Пользователь выступает оператором персональных данных в смысле, придаваемом Федеральным законом «О персональных данных». Разработчик Приложения (Ильяс Ишмухаметов) не осуществляет сбор, хранение, систематизацию, накопление, уточнение, использование, распространение, передачу, обезличивание, блокирование, уничтожение персональных данных, внесённых Пользователем в Приложение. Разработчик не имеет доступа к указанным данным ни при каких обстоятельствах.<br><br>
+      3. <strong>Согласие на обработку</strong><br>
+      Пользователь обязан самостоятельно получить необходимые согласия от субъектов персональных данных, чьи данные вносятся в Приложение. Разработчик не несёт ответственности за нарушение Пользователем законодательства о персональных данных.<br><br>
+      4. <strong>Хранение и безопасность</strong><br>
+      Данные сохраняются в незашифрованном виде в localStorage, который защищён стандартными механизмами безопасности операционной системы и браузера. Пользователь осознаёт и принимает риски, связанные с возможностью несанкционированного доступа третьих лиц к его разблокированному устройству.<br>
+      При очистке данных браузера, переустановке Приложения, использовании режима инкогнито информация может быть безвозвратно утеряна. Настоятельно рекомендуется регулярно создавать резервные копии.<br><br>
+      5. <strong>Бесплатность и добровольные пожертвования</strong><br>
+      Приложение предоставляется на безвозмездной основе. Поддержка разработки осуществляется исключительно через добровольные пожертвования на платформах Boosty и DonationAlerts (ссылки доступны в разделе «О приложении»).<br><br>
+      6. <strong>Ответственность и отказ от гарантий</strong><br>
+      Приложение предоставляется по принципу «как есть». Разработчик не гарантирует отсутствие ошибок, бесперебойную и безошибочную работу, а также полную сохранность данных. Разработчик не несёт ответственности за любые убытки, прямые или косвенные, возникшие в результате использования или невозможности использования Приложения.<br><br>
+      7. <strong>Применимое право и разрешение споров</strong><br>
+      Отношения между Пользователем и Разработчиком регулируются законодательством Российской Федерации. Все споры подлежат разрешению в досудебном претензионном порядке (срок ответа — 30 дней), а при недостижении согласия — в суде по месту нахождения Разработчика.<br><br>
+      8. <strong>Контакты</strong><br>
+      Обратная связь: ВКонтакте (vk.ru/composerbloknot).<br>
+      Приложение создано с использованием технологий искусственного интеллекта.
+    </div>
+    <div id="consentCheckboxGroup" class="form-group">
+      <label><input type="checkbox" id="consentCheckbox"> Я ознакомлен(а) и согласен(а) с условиями</label>
+    </div>
+    <button id="acceptConsentBtn" class="btn btn-primary" disabled>Принимаю</button>
+  </div>
+</div>
+
+<!-- Клиент (добавление/редактирование) -->
+<div id="clientModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>Клиент</h3>
+    <input type="hidden" id="clientId">
+    <div class="form-group"><label>ФИО</label><input id="clientFIO" required></div>
+    <div class="form-group"><label>Тип</label>
+      <select id="clientType">
+        <option value="individual">Физическое лицо</option>
+        <option value="company">Юридическое лицо / ИП</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Телефон</label><input id="clientPhone"></div>
+    <div class="form-group"><label>Email</label><input id="clientEmail"></div>
+    <div class="form-group"><label>Адрес</label><input id="clientAddress"></div>
+    <div class="form-group"><label>Описание</label><textarea id="clientDesc" rows="2"></textarea></div>
+    <div class="modal-buttons">
+      <button class="btn" onclick="hideModal('clientModal')">Отмена</button>
+      <button class="btn btn-primary" id="saveClientBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Задача (добавление/редактирование) -->
+<div id="taskModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3 id="taskModalTitle">Новое обязательство</h3>
+    <input type="hidden" id="taskId">
+    <div class="form-group"><label>Клиент</label><select id="taskClientSelect"></select></div>
+    <div class="form-group"><label>Описание</label><input id="taskDesc"></div>
+    <div class="form-group"><label>Предоплата, ₽</label><input type="number" id="taskPrepay" value="" step="0.01"></div>
+    <div class="form-group"><label>Постоплата, ₽</label><input type="number" id="taskPostpay" value="" step="0.01"></div>
+    <div class="form-group"><label>Затраты, ₽</label><input type="number" id="taskCosts" value="" step="0.01"></div>
+    <div class="form-group">
+      <label>Дата и время</label>
+      <div style="display:flex; gap:8px;">
+        <input type="datetime-local" id="taskDate" style="flex:1;">
+        <button type="button" id="taskDateNowBtn" class="btn btn-sm">Сейчас</button>
+      </div>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn" onclick="hideModal('taskModal')">Отмена</button>
+      <button class="btn btn-primary" id="saveTaskBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Детали клиента -->
+<div id="clientDetailModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <div id="clientDetailContent"></div>
+    <button class="btn" onclick="hideModal('clientDetailModal')">Закрыть</button>
+  </div>
+</div>
+
+<!-- Мусорка воронки -->
+<div id="trashModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>🗑️ Мусорка</h3>
+    <div id="trashContent"></div>
+    <button class="btn" onclick="hideModal('trashModal')">Закрыть</button>
+  </div>
+</div>
+
+<!-- Добавление клиента в воронку -->
+<div id="addToFunnelModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>Добавить в воронку</h3>
+    <div id="addToFunnelContent"></div>
+    <button class="btn" onclick="hideModal('addToFunnelModal')">Закрыть</button>
+  </div>
+</div>
+
+<!-- Управление стадиями воронки -->
+<div id="stagesModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>Управление стадиями</h3>
+    <div id="stagesList"></div>
+    <input id="newStageName" placeholder="Новая стадия" style="width:100%;margin-top:8px;">
+    <button id="addStageBtn" class="btn btn-primary" style="width:100%;margin-top:4px;">Добавить</button>
+    <button class="btn" onclick="hideModal('stagesModal')" style="width:100%;margin-top:8px;">Закрыть</button>
+  </div>
+</div>
+
+<!-- Сброс данных -->
+<div id="resetDataModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3>Сброс данных</h3>
+    <div id="resetContent"></div>
+    <button class="btn" onclick="hideModal('resetDataModal')" style="width:100%;margin-top:8px;">Отмена</button>
+  </div>
+</div>
+
+<!-- Инструкция -->
+<div id="helpModal" class="modal-overlay" style="display:none;">
+  <div class="modal" style="scroll-behavior: smooth;">
+    <h3>📖 Инструкция</h3>
+    <!-- Оглавление -->
+    <div style="margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:8px;">
+      <strong>Содержание</strong>
+      <ul style="list-style:none; padding-left:0; margin-top:8px;">
+        <li><a href="#help-clients" onclick="event.stopPropagation()">Клиенты</a></li>
+        <li><a href="#help-tasks" onclick="event.stopPropagation()">Задачи</a></li>
+        <li><a href="#help-funnel" onclick="event.stopPropagation()">Воронка</a></li>
+        <li><a href="#help-accounting" onclick="event.stopPropagation()">Бухгалтерия</a></li>
+        <li><a href="#help-backup" onclick="event.stopPropagation()">Резервное копирование</a></li>
+        <li><a href="#help-pin" onclick="event.stopPropagation()">PIN-код</a></li>
+      </ul>
+    </div>
+    <!-- Разделы -->
+    <div id="help-clients">
+      <h4>👥 Клиенты</h4>
+      <p>Чтобы добавить клиента, нажмите кнопку <strong>+</strong> в правом верхнем углу. Заполните ФИО (обязательно), тип (физлицо/юрлицо), контакты и описание. Кнопка ✏️ редактирует клиента, 🗑 удаляет. Поиск работает по ФИО.</p>
+       
+    </div>
+    <hr style="margin:12px 0;">
+    <div id="help-tasks">
+      <h4>📋 Задачи (обязательства)</h4>
+      <p>Нажмите <strong>+</strong> в задачах, чтобы создать новое обязательство. Выберите клиента, описание, укажите предоплату/постоплату, затраты и дату. Кнопки <strong>Прд</strong> и <strong>Пст</strong> отмечают получение денег (зелёным). Просроченные задачи подсвечиваются красной полосой слева.</p>
+       
+    </div>
+    <hr style="margin:12px 0;">
+    <div id="help-funnel">
+      <h4>📊 Воронка продаж</h4>
+      <p>Добавьте клиента в воронку через кнопку <strong>+ Клиент</strong>. Перемещайте его между стадиями стрелками. Кнопка 🗑 удаляет в мусорку. В мусорке можно восстановить клиента или очистить всё. Управление стадиями — кнопка внизу воронки.</p>
+       
+    </div>
+    <hr style="margin:12px 0;">
+    <div id="help-accounting">
+      <h4>💰 Бухгалтерия</h4>
+      <p>Здесь считаются ваши доходы, затраты и налог НПД (4% для физлиц, 6% для юрлиц/ИП). Выберите период (месяц, год, произвольный). <strong>Налог вычитается из чистой прибыли автоматически</strong>. Кнопка «Экспорт CSV» в настройках сохранит детализацию.</p>
+       
+    </div>
+    <hr style="margin:12px 0;">
+    <div id="help-backup">
+      <h4>💾 Резервное копирование</h4>
+      <p>Скачайте копию всех данных через кнопку <strong>Скачать</strong>. Загрузите файл JSON обратно, чтобы восстановить данные. <strong>Перед включением PIN-кода обязательно сделайте бэкап!</strong></p>
+       
+    </div>
+    <hr style="margin:12px 0;">
+    <div id="help-pin">
+      <h4>🔒 PIN-код</h4>
+      <p>Включите защиту в настройках. Задайте 4-значный код. После трёх неверных попыток появится кнопка полной очистки. Код восстановления (8 цифр) показывается при включении — сохраните его, чтобы сбросить PIN.</p>
+       
+    </div>
+    <button class="btn" onclick="hideModal('helpModal')" style="width:100%; margin-top:16px;">Закрыть</button>
+  </div>
+</div>
+
+<!-- Статический импорт резервной копии (вне динамического контента) -->
+<button id="staticUploadBtn" style="display:none;">Загрузить</button>
+<input type="file" id="staticBackupInput" accept="*/*" style="display:none;">
+
+<script src="app.js"></script>
+</body>
+</html>
